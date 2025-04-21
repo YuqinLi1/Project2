@@ -1,12 +1,12 @@
-import Registration from "./pages/Registration";
-import Login from "./pages/Login";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Registration from "./pages/Auth/Registration";
+import Login from "./pages/Auth/Login";
 import Application from "./pages/Application"
 import Information from "./pages/Information";
 import Management from "./pages/Management";
 
 function App() {
   return (
-    <WindowSizeProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path = "/registration" element={<Registration />} />
@@ -15,7 +15,6 @@ function App() {
         <Route path="/management" element={<Management />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-      </WindowSizeProvider>
   );
 }
 
