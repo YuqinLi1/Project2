@@ -1,7 +1,7 @@
 require("dotenv").config();
 const app = require("./app");
 const mongoose = require("mongoose");
-const { connectDB } = require("./config/db");
+const { connectDB } = require("./config/DBconnection");
 
 // Constants
 const PORT = process.env.PORT || 5000;

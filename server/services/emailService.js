@@ -1,4 +1,3 @@
-mailService.js;
 const nodemailer = require("nodemailer");
 const emailTemplates = require("../utils/emailTemplates");
 const { asyncHandler } = require("../utils/errorHandler");
@@ -32,14 +31,6 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-/**
- * Sends an email
- * @param {string} to - Recipient email
- * @param {string} subject - Email subject
- * @param {string} html - Email HTML content
- * @param {string} text - Email text content (fallback)
- * @returns {Promise} Email sending result
- */
 const sendEmail = async (to, subject, html, text = "") => {
   try {
     const mailOptions = {

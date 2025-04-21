@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs").promises;
-const Document = require("./models/Document");
-const VisaStatus = require("./models/VisaStatus");
+const Document = require("../models/Document");
+const VisaStatus = require("../models/VisaStatus");
 const { deleteFile } = require("../utils/fileUpload");
 const { asyncHandler } = require("../utils/errorHandler");
 

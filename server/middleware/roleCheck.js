@@ -1,4 +1,4 @@
-const Employee = require("./models/Employee");
+const Employee = require("../models/Employee");
 const { asyncHandler } = require("../utils/errorHandler");
 
 const checkOwnership = asyncHandler(async (req, res, next) => {
