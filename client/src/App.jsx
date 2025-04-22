@@ -6,7 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { UiProvider } from "./contexts/UiContext";
 import { EmployeeProvider } from "./contexts/EmployeeContext";
 import { HrProvider } from "./contexts/HrContext";
-import AlertManager from "./components/common/AlertManager";
+import AlertManager from "./components/common/Alert";
 import "./App.less";
 
 function App() {
