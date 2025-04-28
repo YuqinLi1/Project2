@@ -11,17 +11,18 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const handleLogin = async () => {
-    if (!username || !password || !username.includes('@')) {
+    if (!username || !password ) {
       setError('Error, please check username and password');
       return;
     }
-
+  
     try {
       const response = await axios.post('http://localhost:5000/api/auth/login', {
         username,
         password
       });
       if (response.status === 200) {
+        localStorage.setItem('token', response.data.token); 
         navigate('/application');
       } else {
         setError('Error, please check username and password');
@@ -33,8 +34,10 @@ const Login = () => {
 
   return (
     <Container style={{ marginTop: '2em' }}>
-      <Menu inverted>
-        <Menu.Item header>User Login</Menu.Item>
+      <Menu style={{ backgroundColor: 'white', justifyContent: 'center' }}>
+        <Menu.Item header style={{ color: 'black', fontSize: '1.5em' }}>
+          User Login
+        </Menu.Item>
       </Menu>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '5em' }}>

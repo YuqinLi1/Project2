@@ -4,7 +4,7 @@ import {
 } from 'semantic-ui-react';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
-import { setVisaState, setVisaMessage } from './visaSlice';
+import { setVisaState, setVisaMessage } from '../slices/visaSlice';
 import Navigator from './Navigator';
 
 const Management = () => {

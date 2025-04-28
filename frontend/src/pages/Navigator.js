@@ -15,12 +15,13 @@ const Navigator = () => {
         name="Visa Status"
         onClick={() => navigate('/management')}
       />
-      <Menu.Menu position="right">
-        <Menu.Item
-          name="Logout"
-          onClick={() => navigate('/login')}
-        />
-      </Menu.Menu>
+      <Menu.Item
+        name="Logout"
+        onClick={() => {
+          localStorage.removeItem('token'); 
+          navigate('/login');
+        }}
+      />
     </Menu>
   );
 };

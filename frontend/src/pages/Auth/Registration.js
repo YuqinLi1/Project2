@@ -23,7 +23,7 @@ const Registration = () => {
         email,
         password
       });
-      if (response.status === 200) {
+      if (response.status === 201) {
         navigate('/login');
       } else {
         setError('Error, please try again later');

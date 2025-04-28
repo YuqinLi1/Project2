@@ -11,7 +11,7 @@ import {
   updateEditField,
   setMode,
   discardEdit,
-} from './informationSlice';
+} from '../slices/informationSlice';
 
 const Information = () => {
   const dispatch = useDispatch();

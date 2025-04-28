@@ -1,30 +1,40 @@
-const express = require("express");
-const app = express();
-const dotenv = require("dotenv").config();
-const PORT = 5000;
+require("dotenv").config();
+const app = require("./app");
+const mongoose = require("mongoose");
 const dbconnection = require("./config/DBconnection.js");
-const cookieparser = require("cookie-parser");
-const cors = require("cors");
 
-const authRoutes = require("./routes/authRoutes.js");
-const fileRoutes = require("./routes/productRoutes.js");
-const errorMiddleware = require("./middleware/errorMiddleware");
+// Constants
+const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieparser());
-
-app.use(cors({ origin: true, credentials: true }));
-
-app.get("/", (req, res) => {});
-
-app.use("/auth", authRoutes);
-app.use("/file", fileRoutes);
-
-app.use(errorMiddleware);
-
+// Connect to MongoDB
 dbconnection();
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Start server
+const server = app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+});
+
+// Handle promise rejections
+process.on("unhandledRejection", (err) => {
+  console.error(`Error: ${err.message}`);
+  // Close server & exit process
+  server.close(() => process.exit(1));
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (err) => {
+  console.error(`Error: ${err.message}`);
+  // Exit process
+  process.exit(1);
+});
+
+// Handle SIGTERM signal (for graceful shutdown in containerized environments)
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received. Shutting down gracefully");
+  server.close(() => {
+    console.log("Process terminated");
+    mongoose.connection.close(false, () => {
+      process.exit(0);
+    });
+  });
 });
