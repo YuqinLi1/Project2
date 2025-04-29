@@ -106,8 +106,28 @@ const EmployeeSchema = new mongoose.Schema(
       enum: ["Green Card", "Citizen", null],
       default: null,
     },
+    // New fields for visa information
+    visaType: {
+      type: String,
+      enum: ["H1-B", "L2", "F1(CPT/OPT)", "H4", "Other", null],
+      default: null,
+    },
+    visaTitle: {
+      type: String,
+      default: null,
+    },
+    startDate: {
+      type: Date,
+      default: null,
+    },
+    endDate: {
+      type: Date,
+      default: null,
+    },
+
     reference: ContactSchema,
     emergencyContacts: [ContactSchema],
+
     onboardingStatus: {
       type: String,
       enum: ["never submitted", "pending", "approved", "rejected"],

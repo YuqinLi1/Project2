@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Container, Form, Grid, Segment, Radio,
-  Button, Header, Divider, Message
+  Button, Header, Divider, Message, Dropdown
 } from 'semantic-ui-react';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
@@ -76,13 +76,31 @@ const stateOptions = [
   { key: 'WY', value: 'WY', text: 'WY' },
 ];
 
+const visaOptions = [
+  { key: 'h1b', text: 'H1-B', value: 'H1-B' },
+  { key: 'l2', text: 'L2', value: 'L2' },
+  { key: 'f1', text: 'F1(CPT/OPT)', value: 'F1(CPT/OPT)' },
+  { key: 'h4', text: 'H4', value: 'H4' },
+  { key: 'other', text: 'Other', value: 'Other' },
+];
 
 const Application = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { status, rejectReason, formData } = useSelector(state => state.application);
+
   const [unauthorized, setUnauthorized] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [driverLicenseFile, setDriverLicenseFile] = useState(null);
+  const [workAuthorizationFile, setWorkAuthorizationFile] = useState(null);
+  const [optReceiptFile, setOptReceiptFile] = useState(null); // only if visaType === 'F1(CPT/OPT)'
+
+  const [isCitizen, setIsCitizen] = useState(null);
+  const [residencyType, setResidencyType] = useState('');
+  const [visaType, setVisaType] = useState('');
+  const [visaTitle, setVisaTitle] = useState('');
+  const [visaStartDate, setVisaStartDate] = useState('');
+  const [visaEndDate, setVisaEndDate] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -119,6 +137,10 @@ const Application = () => {
 
   const isReadOnly = status === 'Pending';
 
+  const handleFileChange = (setter) => (e) => {
+    setter(e.target.files[0]);
+  };
+
   const handleChange = (field) => (e, data) => {
     const value = data?.value ?? e.target.value;
     dispatch(updateFormField({ field, value }));
@@ -132,15 +154,6 @@ const Application = () => {
     dispatch(updateFormField({ field: 'ecEmail', value: formData.refEmail || '' }));
     dispatch(updateFormField({ field: 'ecRelationship', value: formData.refRelationship || '' }));
   };
-
-  if (unauthorized) {
-    return (
-      <Container style={{ marginTop: '5em', textAlign: 'center' }}>
-        <Header as="h1" color="red">401 Unauthorized</Header>
-        <p>Please login first.</p>
-      </Container>
-    );
-  }
 
   const handleSubmit = async () => {
     const token = localStorage.getItem('token');
@@ -189,7 +202,12 @@ const Application = () => {
           },
         ],
         isPermanentResident: formData.citizenship === 'yes',
-        onboardingStatus: "never submitted", // ✅ Added
+        residencyType: formData.residencyType || null,
+        onboardingStatus: "never submitted",
+        visaType: formData.visaType || null,
+        startDate: formData.startDate || null,
+        endDate: formData.endDate || null,
+        visaTitle: formData.visaTitle || null,
       };
   
       const employeeResponse = await axios.post(
@@ -198,15 +216,33 @@ const Application = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
   
-      const employeeId = employeeResponse.data.data._id;
+      const employeeId = employeeResponse.data.employeeId;
       console.log("Created Employee ID:", employeeId);
   
-      // Step 2: Upload documents
+      // Step 2: Upload Documents
       const formDataUpload = new FormData();
-      selectedFiles.forEach((file) => {
-        formDataUpload.append('documents', file);
-      });
-      formDataUpload.append('employeeId', employeeId); // ✅ Important
+  
+      if (profilePictureFile) {
+        formDataUpload.append('documents', profilePictureFile);
+        formDataUpload.append('types', "Profile Picture");
+      }
+  
+      if (driverLicenseFile) {
+        formDataUpload.append('documents', driverLicenseFile);
+        formDataUpload.append('types', "Driver's License");
+      }
+  
+      if (workAuthorizationFile) {
+        formDataUpload.append('documents', workAuthorizationFile);
+        formDataUpload.append('types', "Work Authorization");
+      }
+  
+      if (formData.visaType === 'F1(CPT/OPT)' && optReceiptFile) {
+        formDataUpload.append('documents', optReceiptFile);
+        formDataUpload.append('types', "OPT Receipt");
+      }
+  
+      formDataUpload.append('employeeId', employeeId);
   
       await axios.post(
         'http://localhost:5000/api/documents/uploadMultiple',
@@ -232,6 +268,15 @@ const Application = () => {
       }
     }
   };
+
+  if (unauthorized) {
+    return (
+      <Container style={{ marginTop: '5em', textAlign: 'center' }}>
+        <Header as="h1" color="red">401 Unauthorized</Header>
+        <p>Please login first.</p>
+      </Container>
+    );
+  }
 
   return (
     <Container style={{ marginTop: '2em' }}>
@@ -386,33 +431,8 @@ const Application = () => {
             </Grid.Row>
           </Grid>
 
-          {/* Citizenship */}
-          <Form.Field>
-            <label>Are you a permanent resident or citizen of the U.S.?</label>
-            <Form.Group inline>
-              <Form.Field
-                control={Radio}
-                label="Yes"
-                name="citizenship"
-                value="yes"
-                checked={formData.citizenship === 'yes'}
-                onChange={handleChange('citizenship')}
-                disabled={isReadOnly}
-              />
-              <Form.Field
-                control={Radio}
-                label="No"
-                name="citizenship"
-                value="no"
-                checked={formData.citizenship === 'no'}
-                onChange={handleChange('citizenship')}
-                disabled={isReadOnly}
-              />
-            </Form.Group>
-          </Form.Field>
-
-        {/* Reference */}
-        <Header as="h4">Reference (Who referred you?)</Header>
+          {/* Reference */}
+          <Header as="h4">Reference (Who referred you?)</Header>
           <Grid columns={4} stackable>
             <Grid.Row>
               <Grid.Column>
@@ -509,39 +529,121 @@ const Application = () => {
             </Grid.Row>
           </Grid>
 
-          <Header as="h4">Upload Files</Header>
-          <ul>
-            <li>1. Profile picture</li>
-            <li>2. Driver’s license</li>
-            <li>3. Work authorization</li>
-          </ul>
-
+         {/* Upload files */}
+         <Header as="h4">Upload Documents</Header>
           <Form.Input
-            label="Upload Files"
+            label="Profile Picture"
             type="file"
-            multiple
-            onChange={(e) => {
-              const newFiles = Array.from(e.target.files);
-              setSelectedFiles(prevFiles => [...prevFiles, ...newFiles]); // ✅ Append files
-            }}
+            onChange={(e) => setProfilePictureFile(e.target.files[0])}
+            disabled={isReadOnly}
+          />
+          <Form.Input
+            label="Driver’s License"
+            type="file"
+            onChange={(e) => setDriverLicenseFile(e.target.files[0])}
+            disabled={isReadOnly}
+          />
+          <Form.Input
+            label="Work Authorization"
+            type="file"
+            onChange={(e) => setWorkAuthorizationFile(e.target.files[0])}
             disabled={isReadOnly}
           />
 
-          {/* ✅ Show uploaded files */}
-          {selectedFiles.length > 0 && (
-            <Segment>
-              <Header as="h4">Uploaded Files:</Header>
-              <ul>
-                {selectedFiles.map((file, idx) => (
-                  <li key={idx}>{file.name}</li>
-                ))}
-              </ul>
-            </Segment>
+          {formData.visaType === 'F1(CPT/OPT)' && (
+            <Form.Input
+              label="OPT Receipt"
+              type="file"
+              onChange={(e) => setOptReceiptFile(e.target.files[0])}
+              disabled={isReadOnly}
+            />
+          )}
+
+          {/* Citizenship */}
+          {/* Citizenship question */}
+          <Form.Field>
+            <label>Are you a permanent resident or citizen of the U.S.?</label>
+            <Form.Group inline>
+              <Form.Field
+                control={Radio}
+                label="Yes"
+                name="citizenship"
+                value="yes"
+                checked={formData.citizenship === 'yes'}
+                onChange={handleChange('citizenship')}
+                disabled={isReadOnly}
+              />
+              <Form.Field
+                control={Radio}
+                label="No"
+                name="citizenship"
+                value="no"
+                checked={formData.citizenship === 'no'}
+                onChange={handleChange('citizenship')}
+                disabled={isReadOnly}
+              />
+            </Form.Group>
+          </Form.Field>
+
+          {/* Residency type if yes */}
+          {formData.citizenship === 'yes' && (
+            <Form.Select
+              label="Residency Type"
+              options={[
+                { key: 'green_card', text: 'Green Card', value: 'Green Card' },
+                { key: 'citizen', text: 'Citizen', value: 'Citizen' },
+              ]}
+              value={formData.residencyType || ''}
+              onChange={handleChange('residencyType')}
+              disabled={isReadOnly}
+              required
+            />
+          )}
+
+          {/* Visa Section */}
+          {formData.citizenship === 'no' && (
+            <>
+              <Form.Select
+                label="Visa Type"
+                options={visaOptions}
+                value={formData.visaType || ''}
+                onChange={handleChange('visaType')}
+                disabled={isReadOnly}
+                required
+              />
+              <Form.Group widths="equal">
+                <Form.Input
+                  label="Start Date"
+                  type="date"
+                  value={formData.startDate || ''}
+                  onChange={handleChange('startDate')}
+                  disabled={isReadOnly}
+                  required
+                />
+                <Form.Input
+                  label="End Date"
+                  type="date"
+                  value={formData.endDate || ''}
+                  onChange={handleChange('endDate')}
+                  disabled={isReadOnly}
+                  required
+                />
+              </Form.Group>
+              {formData.visaType === 'Other' && (
+                <Form.Input
+                  label="Visa Title"
+                  placeholder="Enter Visa Title"
+                  value={formData.visaTitle || ''}
+                  onChange={handleChange('visaTitle')}
+                  disabled={isReadOnly}
+                  required
+                />
+              )}
+            </>
           )}
 
           <Divider />
-
-          <Button primary disabled={isReadOnly} onClick={handleSubmit}>Submit</Button>
+          <Button primary onClick={handleSubmit}>Submit</Button>
         </Form>
       </Segment>
     </Container>

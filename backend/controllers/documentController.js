@@ -17,30 +17,54 @@ const getDocument = asyncHandler(async (req, res) => {
 
 // Upload multiple documents
 const uploadMultipleDocuments = asyncHandler(async (req, res) => {
-  console.log("check 2 "+req);
-  const employeeId = req.user.employeeId;
-  console.log("check 3 "+employeeId);
+  const { employeeId } = req.body;
+
+  if (!employeeId) {
+    return res.status(400).json({ success: false, message: "EmployeeId is required" });
+  }
 
   if (!req.filesInfo || req.filesInfo.length === 0) {
     return res.status(400).json({ success: false, message: "No files uploaded" });
   }
 
+  const types = req.body.types; // types sent as array
+  if (!types || types.length !== req.filesInfo.length) {
+    return res.status(400).json({ success: false, message: "Mismatch between files and types" });
+  }
+
+  const requiredTypes = ["Profile Picture", "Driver's License", "Work Authorization"];
+  const uploadedTypes = new Set(types);
+
+  // Check if required documents are uploaded
+  const missingTypes = requiredTypes.filter(t => !uploadedTypes.has(t));
+  if (missingTypes.length > 0) {
+    return res.status(400).json({ success: false, message: "Missing documents: " + missingTypes.join(", ") });
+  }
+
   const documents = [];
 
-  for (const fileInfo of req.filesInfo) {
+  for (let i = 0; i < req.filesInfo.length; i++) {
+    const fileInfo = req.filesInfo[i];
+    const type = types[i];
+
     const document = await documentService.createDocument({
       employeeId,
-      type: "Supporting Document",
+      type,
       fileName: fileInfo.fileName,
       fileUrl: fileInfo.fileUrl,
       fileSize: fileInfo.fileSize,
       mimeType: fileInfo.mimeType,
       status: "pending",
     });
+
     documents.push(document);
   }
 
-  res.status(201).json({ success: true, message: "Multiple documents uploaded successfully", data: documents });
+  res.status(201).json({
+    success: true,
+    message: "Documents uploaded successfully",
+    data: documents,
+  });
 });
 
 // Preview document
