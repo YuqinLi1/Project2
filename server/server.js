@@ -1,13 +1,13 @@
 require("dotenv").config();
 const app = require("./app");
 const mongoose = require("mongoose");
-const { connectDB } = require("./config/DBconnection");
+const dbconnection = require("./config/DBconnection.js");
 
 // Constants
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
-connectDB();
+dbconnection();
 
 // Start server
 const server = app.listen(PORT, () => {

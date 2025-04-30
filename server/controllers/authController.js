@@ -4,34 +4,25 @@ const tokenService = require("../services/tokenService");
 const User = require("../models/User");
 
 const register = asyncHandler(async (req, res) => {
-  const { username, password, confirmPassword, token } = req.body;
+  const { username, email, password} = req.body;
 
   // Validate input
-  if (!username || !password || !confirmPassword || !token) {
+  if (!username || !email || !password) {
     return res.status(400).json({
       success: false,
       message: "Please provide all required fields",
     });
   }
-
-  // Check if passwords match
-  if (password !== confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "Passwords do not match",
-    });
-  }
+  console.log("check 2");
 
   // Register user
-  const { user, token: authToken } = await authService.registerUser(
-    { username, password },
-    token
+  const { user} = await authService.registerUser(
+    { username, email, password },
   );
 
   res.status(201).json({
     success: true,
     message: "User registered successfully",
-    token: authToken,
     user: {
       id: user._id,
       username: user.username,
@@ -87,37 +78,9 @@ const getMe = asyncHandler(async (req, res) => {
   });
 });
 
-const changePassword = asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword, confirmPassword } = req.body;
-
-  // Validate input
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "Please provide all required fields",
-    });
-  }
-
-  // Check if new passwords match
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "New passwords do not match",
-    });
-  }
-
-  // Change password
-  await authService.changePassword(req.user.id, currentPassword, newPassword);
-
-  res.status(200).json({
-    success: true,
-    message: "Password changed successfully",
-  });
-});
 
 module.exports = {
   register,
   login,
   getMe,
-  changePassword,
 };

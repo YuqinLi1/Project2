@@ -38,22 +38,6 @@ app.use("/api/hr", hrRoutes);
 app.use("/api/documents", documentsRoutes);
 app.use("/api/visa-status", visaStatusRoutes);
 
-// Health check route
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "OK", message: "Server is running" });
-});
-
-// Serve static files in production
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../client/build")));
-
-  app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "../client/build", "index.html"));
-  });
-}
-
-// Global error handler
-app.use(errorHandler);
 
 // 404 handler
 app.use((req, res) => {

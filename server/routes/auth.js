@@ -24,10 +24,7 @@ router.post(
   [
     sanitizeBody,
     check("username", "Username is required").not().isEmpty(),
-    check("password", "Password must be at least 6 characters").isLength({
-      min: 6,
-    }),
-    check("confirmPassword", "Confirm password is required").not().isEmpty(),
+    check("password", "password is required").not().isEmpty(),
     check("token", "Registration token is required").not().isEmpty(),
     validateRequest,
   ],
@@ -48,21 +45,5 @@ router.post(
 
 // Get current user profile
 router.get("/me", protect, getMe);
-
-// Change password
-router.put(
-  "/change-password",
-  [
-    protect,
-    sanitizeBody,
-    check("currentPassword", "Current password is required").not().isEmpty(),
-    check("newPassword", "New password must be at least 6 characters").isLength(
-      { min: 6 }
-    ),
-    check("confirmPassword", "Confirm password is required").not().isEmpty(),
-    validateRequest,
-  ],
-  changePassword
-);
 
 module.exports = router;
