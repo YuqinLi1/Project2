@@ -15,18 +15,18 @@ import "semantic-ui-css/semantic.min.css";
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <AuthProvider>
-        <UiProvider>
-          <HrProvider>
-            <EmployeeProvider>
-              <BrowserRouter>
+    <BrowserRouter>
+      <Provider store={store}>
+        <AuthProvider>
+          <UiProvider>
+            <HrProvider>
+              <EmployeeProvider>
                 <App />
-              </BrowserRouter>
-            </EmployeeProvider>
-          </HrProvider>
-        </UiProvider>
-      </AuthProvider>
-    </Provider>
+              </EmployeeProvider>
+            </HrProvider>
+          </UiProvider>
+        </AuthProvider>
+      </Provider>
+    </BrowserRouter>
   </React.StrictMode>
 );

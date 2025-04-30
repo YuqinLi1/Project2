@@ -1,45 +1,97 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { loadUser } from "../redux/actions/authActions";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios"; // Assuming you're using axios for API calls
 
-// Create context
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const dispatch = useDispatch();
-  const auth = useSelector((state) => state.auth);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
+  // Check authentication on initial load
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      // Load user data
-      dispatch(loadUser()).finally(() => {
-        setLoading(false);
-      });
+      validateToken(token);
     } else {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [dispatch]);
+  }, []);
 
-  // Value to be provided by the context
-  const value = {
-    isAuthenticated: auth.isAuthenticated,
-    user: auth.user,
-    loading: auth.loading || loading,
-    error: auth.error,
+  // Validate token with backend
+  const validateToken = async (token) => {
+    try {
+      const response = await axios.get("/api/auth/validate", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUser(response.data.user);
+      setIsLoading(false);
+    } catch (error) {
+      // Token is invalid, clear it
+      localStorage.removeItem("token");
+      setUser(null);
+      setIsLoading(false);
+      navigate("/login");
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  // Login function
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post("/api/auth/login", { email, password });
+
+      // Assuming the response contains user data and token
+      const { token, user: userData } = response.data;
+
+      // Store token in localStorage
+      localStorage.setItem("token", token);
+
+      // Set user in context
+      setUser(userData);
+
+      // Redirect to dashboard
+      navigate("/employee/dashboard");
+    } catch (error) {
+      // Handle login errors
+      throw error;
+    }
+  };
+
+  // Logout function
+  const logout = () => {
+    // Remove token from localStorage
+    localStorage.removeItem("token");
+
+    // Clear user from context
+    setUser(null);
+
+    // Redirect to login
+    navigate("/login");
+  };
+
+  // Provide context value
+  const value = {
+    user,
+    isLoading,
+    login,
+    logout,
+    isAuthenticated: !!user,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!isLoading && children}
+    </AuthContext.Provider>
+  );
 };
 
 // Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === null) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
-
-export default AuthContext;

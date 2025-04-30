@@ -58,9 +58,8 @@ import {
 } from "../../redux/actions/employmentActions";
 import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions"; // Replacing setActiveMenuItem
+import { useAuth } from "../../contexts/AuthContext";
 
-// Import custom hooks
-import useAuth from "../../hooks/useAuth"; // Updated from useAuth
 import useWindowSize from "../../hooks/useWindowSize"; // Updated from useWindowSize
 import useLocalStorage from "../../hooks/useLocalStorage"; // Updated from useLocalStorage
 
@@ -77,14 +76,25 @@ const VisaManagement = () => {
   // Redux state
   const { isAuthenticated, user } = useAuth();
   const {
-    visaStatus,
-    loading,
-    uploadLoading,
-    downloadLoading,
-    previewLoading,
-    error,
-    uploadError,
-  } = useSelector((state) => state.employment);
+    visaStatus = null,
+    loading = false,
+    uploadLoading = false,
+    downloadLoading = false,
+    previewLoading = false,
+    error = null,
+    uploadError = null,
+  } = useSelector((state) => {
+    const employmentState = state.employment || {};
+    return {
+      visaStatus: employmentState.visaStatus,
+      loading: employmentState.loading,
+      uploadLoading: employmentState.uploadLoading,
+      downloadLoading: employmentState.downloadLoading,
+      previewLoading: employmentState.previewLoading,
+      error: employmentState.error,
+      uploadError: employmentState.uploadError,
+    };
+  });
   const { activeMenuItem } = useSelector(
     (state) => state.ui || { activeMenuItem: "visa-status" }
   );
@@ -110,10 +120,10 @@ const VisaManagement = () => {
   }, [windowSize.width]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login");
-      return;
-    }
+    // if (!isAuthenticated) {
+    //   navigate("/login");
+    //   return;
+    // }
 
     // Fetch visa status when component mounts
     dispatch(getVisaStatus());

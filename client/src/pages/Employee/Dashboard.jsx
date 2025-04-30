@@ -36,9 +36,7 @@ import moment from "moment";
 import { getProfile } from "../../redux/actions/employmentActions";
 import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions";
-
-// Import custom hooks
-import useAuth from "../../hooks/useAuth";
+import { useAuth } from "../../contexts/AuthContext";
 import useWindowSize from "../../hooks/useWindowSize";
 
 const { Header, Content, Sider } = Layout;
@@ -49,8 +47,7 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const windowSize = useWindowSize();
 
-  // Auth state from custom hook
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
 
   // Employment state from Redux - with safe fallbacks
   const employmentState = useSelector((state) => state.employment) || {};
