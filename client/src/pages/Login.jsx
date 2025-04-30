@@ -1,34 +1,33 @@
 import React, { useState } from 'react';
 import { Container, Menu } from 'semantic-ui-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext'; // Adjust the path if needed
 import LoginBox from './LoginBox';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const { login, error, clearError } = useAuth();
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState('');
 
   const handleLogin = async () => {
-    if (!username || !password ) {
-      setError('Error, please check username and password');
+    if (!username || !password) {
+      setLocalError('Error, please check username and password');
       return;
     }
-  
-    try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
-        username,
-        password
-      });
-      if (response.status === 200) {
-        localStorage.setItem('token', response.data.token); 
-        navigate('/application');
-      } else {
-        setError('Error, please check username and password');
-      }
-    } catch {
-      setError('Error, please check username and password');
+
+    // Clear previous errors
+    setLocalError('');
+    clearError();
+
+    const success = await login({ username, password });
+
+    if (success) {
+      navigate('/employee'); // Change this if your dashboard is /employee/dashboard
+    } else {
+      setLocalError('Login failed. Please check your credentials.');
     }
   };
 
@@ -44,7 +43,7 @@ const Login = () => {
         <LoginBox
           buttonLabel="Login"
           onSubmit={handleLogin}
-          errorMessage={error}
+          errorMessage={localError || error}
           inputs={[
             {
               label: 'Username',

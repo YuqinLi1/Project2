@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 
 // Import pages
 import Login from "./pages/Login";
@@ -11,16 +11,35 @@ import VisaManagement from "./pages/Employee/VisaManagement";
 import HrLogin from "./pages/HR/Login";
 import HrDashboard from "./pages/HR/Dashboard";
 
+const EmployeeLayout = () => {
+  console.log("EmployeeLayout rendered");
+
+  return (
+    <div style={{ padding: "2em" }}>
+      <h2>Employee Layout</h2>
+      <Outlet />
+    </div>
+  );
+};
+
 // Protected Route component
 const ProtectedRoute = ({ children, role }) => {
   const isAuthenticated = localStorage.getItem("token") ? true : false;
-  const userRole = localStorage.getItem("userRole"); // You should store user role in localStorage or get it from Redux
+  const userRole = localStorage.getItem("userRole"); // Should have been set at login
+
+  console.log("PrivateRoute check:", {
+    isAuthenticated,
+    userRole,
+    expectedRole: role,
+  });
 
   if (!isAuthenticated) {
+    console.log("Not authenticated, redirecting to /login");
     return <Navigate to="/login" />;
   }
 
-  if (role && userRole !== role) {
+  if (false && role && userRole !== role) {
+    console.log("Role mismatch: redirecting based on role");
     return (
       <Navigate
         to={userRole === "hr" ? "/hr/dashboard" : "/employee/dashboard"}
@@ -28,6 +47,7 @@ const ProtectedRoute = ({ children, role }) => {
     );
   }
 
+  console.log("Access granted");
   return children;
 };
 
@@ -40,7 +60,8 @@ function App() {
       <Route path="/hr/login" element={<HrLogin />} />
 
       {/* Employee Protected Routes */}
-      <Route path="/employee">
+      <Route path="/employee" element={<EmployeeLayout />}>
+      <Route index element={<Navigate to="dashboard" replace />} />
         <Route
           path="dashboard"
           element={

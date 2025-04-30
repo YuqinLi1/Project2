@@ -25,14 +25,15 @@ const authReducer = (state, action) => {
         loading: false,
         error: null,
       };
-    case "USER_LOADED":
-      return {
-        ...state,
-        isAuthenticated: true,
-        user: action.payload,
-        loading: false,
-        error: null,
-      };
+      case "USER_LOADED":
+        console.log("Reducer: USER_LOADED", action.payload);
+        return {
+          ...state,
+          isAuthenticated: true,
+          user: action.payload,
+          loading: false,
+          error: null,
+        };
     case "AUTH_ERROR":
     case "LOGIN_FAIL":
     case "REGISTER_FAIL":
@@ -61,13 +62,25 @@ export const AuthProvider = ({ children }) => {
 
   // Load user
   const loadUser = async () => {
+    console.log("Calling /auth/me...");
     try {
       const res = await api.get("/auth/me");
+      console.log("Response from /auth/me:", res.data);
+  
+      const user = res.data.data;
+      if (!user || !user.role) {
+        console.error("Invalid user object:", user);
+        return;
+      }
+  
       dispatch({
         type: "USER_LOADED",
-        payload: res.data.data,
+        payload: user,
       });
+  
+      console.log("User loaded:", user);
     } catch (err) {
+      console.error("Error in loadUser", err);
       dispatch({
         type: "AUTH_ERROR",
         payload: err.response?.data?.message || "Authentication error",
@@ -75,14 +88,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login user
   const login = async (credentials) => {
     try {
       const res = await api.post("/auth/login", credentials);
+  
+      // Set token for future requests
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userRole", res.data.user.role);
+      api.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
+  
+      // Option 1a: Use user data from login response directly
       dispatch({
-        type: "LOGIN_SUCCESS",
-        payload: res.data,
+        type: "USER_LOADED", // reuse this instead of "LOGIN_SUCCESS"
+        payload: res.data.user,
       });
+  
       return true;
     } catch (err) {
       dispatch({

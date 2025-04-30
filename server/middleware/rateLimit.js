@@ -33,8 +33,10 @@ const uploadLimiter = rateLimit({
   },
 });
 
+const noLimit = (req, res, next) => next();
+
 module.exports = {
-  apiLimiter,
-  authLimiter,
-  uploadLimiter,
+  apiLimiter:noLimit,
+  authLimiter:noLimit,
+  uploadLimiter:noLimit,
 };

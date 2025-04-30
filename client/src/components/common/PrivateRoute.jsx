@@ -3,6 +3,13 @@ import { Navigate, useLocation } from "react-router-dom";
 import { Spin } from "antd";
 import { useAuth } from "../../contexts/AuthContext";
 
+console.log("PrivateRoute state", {
+  loading,
+  isAuthenticated,
+  user,
+  expectedRole: role
+});
+
 const PrivateRoute = ({ children, role }) => {
   const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
@@ -24,6 +31,7 @@ const PrivateRoute = ({ children, role }) => {
 
   if (!isAuthenticated) {
     // Redirect to login if not authenticated
+    console.log("Not authenticated, redirecting...");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
