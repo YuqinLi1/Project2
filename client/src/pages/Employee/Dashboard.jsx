@@ -1,46 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import ProtectedRoute from "../../components/common/ProtectedRoute";
 
 // Import actions
 import { getProfile } from "../../redux/actions/employmentActions";
 import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions";
 
-const Dashboard = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
 
-  useEffect(() => {
-    console.log("Dashboard rendered");
-
-    // Fetch employee status when component mounts
-    dispatch(getProfile());
-
-    // Set active menu item - using setAlert as a placeholder since setActiveMenuItem isn't available
-    dispatch(
-      setAlert({
-        type: "info",
-        message: "Dashboard loaded",
-        activeMenuItem: "dashboard",
-      })
-    );
-  }, [dispatch, navigate]);
-
-  // Handle menu item click
-  const handleMenuClick = (key) => {
-    // Using setAlert as a placeholder since setActiveMenuItem isn't available
-    dispatch(
-      setAlert({
-        type: "info",
-        message: `Navigating to ${key}`,
-        activeMenuItem: key,
-      })
-    );
-    navigate(`/employee/${key}`);
-  };
-
-  console.log("Component rendered");
+const DashboardContent = () => {
+  console.log("Dashboard rendered");
 
   return (
     <div style={{ padding: "2em" }}>
@@ -49,5 +19,11 @@ const Dashboard = () => {
     </div>
   );
 };
+
+const Dashboard = () => (
+  <ProtectedRoute role="employee">
+    <DashboardContent />
+  </ProtectedRoute>
+);
 
 export default Dashboard;

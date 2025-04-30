@@ -10,6 +10,7 @@ import PersonalInfo from "./pages/Employee/PersonalInfo";
 import VisaManagement from "./pages/Employee/VisaManagement";
 import HrLogin from "./pages/HR/Login";
 import HrDashboard from "./pages/HR/Dashboard";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 
 const EmployeeLayout = () => {
   console.log("EmployeeLayout rendered");
@@ -20,35 +21,6 @@ const EmployeeLayout = () => {
       <Outlet />
     </div>
   );
-};
-
-// Protected Route component
-const ProtectedRoute = ({ children, role }) => {
-  const isAuthenticated = localStorage.getItem("token") ? true : false;
-  const userRole = localStorage.getItem("userRole"); // Should have been set at login
-
-  console.log("PrivateRoute check:", {
-    isAuthenticated,
-    userRole,
-    expectedRole: role,
-  });
-
-  if (!isAuthenticated) {
-    console.log("Not authenticated, redirecting to /login");
-    return <Navigate to="/login" />;
-  }
-
-  if (false && role && userRole !== role) {
-    console.log("Role mismatch: redirecting based on role");
-    return (
-      <Navigate
-        to={userRole === "hr" ? "/hr/dashboard" : "/employee/dashboard"}
-      />
-    );
-  }
-
-  console.log("Access granted");
-  return children;
 };
 
 function App() {

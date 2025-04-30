@@ -91,18 +91,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const res = await api.post("/auth/login", credentials);
-  
-      // Set token for future requests
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userRole", res.data.user.role);
-      api.defaults.headers.common["Authorization"] = `Bearer ${res.data.token}`;
-  
-      // Option 1a: Use user data from login response directly
       dispatch({
-        type: "USER_LOADED", // reuse this instead of "LOGIN_SUCCESS"
-        payload: res.data.user,
+        type: "LOGIN_SUCCESS",
+        payload: res.data,
       });
-  
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userRole", res.data.user.role); // Set userRole here
       return true;
     } catch (err) {
       dispatch({
