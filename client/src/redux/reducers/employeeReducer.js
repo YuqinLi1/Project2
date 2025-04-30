@@ -17,83 +17,160 @@ import {
   FETCH_VISA_STATUS_REQUEST,
   FETCH_VISA_STATUS_SUCCESS,
   FETCH_VISA_STATUS_FAIL,
-  CLEAR_ERRORS,
 } from "../types";
 
 const initialState = {
-  profile: null,
+  employeeInfo: null,
+  onboardingApplication: null,
   documents: [],
   visaStatus: null,
+  onboardingStatus: null, // 'Not Started', 'Pending', 'Approved', 'Rejected'
   loading: false,
+  updateLoading: false,
+  uploadLoading: false,
+  downloadLoading: false,
+  previewLoading: false,
+  submitting: false,
   error: null,
+  updateError: null,
+  uploadError: null,
+  submitError: null,
 };
 
-export default function (state = initialState, action) {
-  const { type, payload } = action;
-
-  switch (type) {
+const employmentReducer = (state = initialState, action) => {
+  switch (action.type) {
     case FETCH_PROFILE_REQUEST:
-    case UPDATE_PROFILE_REQUEST:
-    case ONBOARDING_SUBMIT_REQUEST:
-    case FETCH_DOCUMENTS_REQUEST:
-    case UPLOAD_DOCUMENT_REQUEST:
-    case FETCH_VISA_STATUS_REQUEST:
       return {
         ...state,
         loading: true,
+        error: null,
       };
     case FETCH_PROFILE_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        employeeInfo: action.payload,
+        // Extract onboarding status from profile if available
+        onboardingStatus:
+          action.payload?.onboardingStatus || state.onboardingStatus,
+        error: null,
+      };
+    case FETCH_PROFILE_FAIL:
+      return {
+        ...state,
+        loading: false,
+        error: action.payload,
+      };
+
+    case UPDATE_PROFILE_REQUEST:
+      return {
+        ...state,
+        updateLoading: true,
+        updateError: null,
+      };
     case UPDATE_PROFILE_SUCCESS:
       return {
         ...state,
-        profile: payload,
-        loading: false,
-        error: null,
+        employeeInfo: action.payload,
+        updateLoading: false,
+        updateError: null,
+      };
+    case UPDATE_PROFILE_FAIL:
+      return {
+        ...state,
+        updateLoading: false,
+        updateError: action.payload,
+      };
+
+    case ONBOARDING_SUBMIT_REQUEST:
+      return {
+        ...state,
+        submitting: true,
+        submitError: null,
       };
     case ONBOARDING_SUBMIT_SUCCESS:
       return {
         ...state,
-        loading: false,
+        onboardingApplication: action.payload,
+        onboardingStatus: "Pending", // Update status after submission
+        submitting: false,
+        submitError: null,
+      };
+    case ONBOARDING_SUBMIT_FAIL:
+      return {
+        ...state,
+        submitting: false,
+        submitError: action.payload,
+      };
+
+    case FETCH_DOCUMENTS_REQUEST:
+      return {
+        ...state,
+        loading: true,
         error: null,
       };
     case FETCH_DOCUMENTS_SUCCESS:
       return {
         ...state,
-        documents: payload,
+        documents: action.payload,
         loading: false,
         error: null,
+      };
+    case FETCH_DOCUMENTS_FAIL:
+      return {
+        ...state,
+        loading: false,
+        error: action.payload,
+      };
+
+    case UPLOAD_DOCUMENT_REQUEST:
+      return {
+        ...state,
+        uploadLoading: true,
+        uploadError: null,
       };
     case UPLOAD_DOCUMENT_SUCCESS:
       return {
         ...state,
-        documents: [...state.documents, payload],
-        loading: false,
+        // Add the new document or update existing documents
+        documents: state.documents.find((d) => d.id === action.payload.id)
+          ? state.documents.map((doc) =>
+              doc.id === action.payload.id ? action.payload : doc
+            )
+          : [...state.documents, action.payload],
+        uploadLoading: false,
+        uploadError: null,
+      };
+    case UPLOAD_DOCUMENT_FAIL:
+      return {
+        ...state,
+        uploadLoading: false,
+        uploadError: action.payload,
+      };
+
+    case FETCH_VISA_STATUS_REQUEST:
+      return {
+        ...state,
+        loading: true,
         error: null,
       };
     case FETCH_VISA_STATUS_SUCCESS:
       return {
         ...state,
-        visaStatus: payload,
+        visaStatus: action.payload,
         loading: false,
         error: null,
       };
-    case FETCH_PROFILE_FAIL:
-    case UPDATE_PROFILE_FAIL:
-    case ONBOARDING_SUBMIT_FAIL:
-    case FETCH_DOCUMENTS_FAIL:
-    case UPLOAD_DOCUMENT_FAIL:
     case FETCH_VISA_STATUS_FAIL:
       return {
         ...state,
         loading: false,
-        error: payload,
+        error: action.payload,
       };
-    case CLEAR_ERRORS:
-      return {
-        ...state,
-        error: null,
-      };
+
     default:
       return state;
   }
-}
+};
+
+export default employmentReducer;

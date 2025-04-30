@@ -1,14 +1,25 @@
 import { useContext } from "react";
-import { AuthContext } from "../contexts/AuthContext";
+import { useSelector } from "react-redux";
+import AuthContext from "../contexts/AuthContext";
 
+// Custom hook to use auth data
 const useAuth = () => {
-  const context = useContext(AuthContext);
+  // Always call hooks at the top level
+  const authContext = useContext(AuthContext);
+  const authState = useSelector((state) => state.auth);
 
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  // If auth context is available, use it
+  if (authContext) {
+    return authContext;
   }
 
-  return context;
+  // Otherwise, fallback to Redux state
+  return {
+    isAuthenticated: authState?.isAuthenticated || false,
+    user: authState?.user || null,
+    loading: authState?.loading || false,
+    error: authState?.error || null,
+  };
 };
 
 export default useAuth;

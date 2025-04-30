@@ -8,12 +8,7 @@ const {
   validateEmail,
 } = require("../middleware/validation");
 const { check } = require("express-validator");
-const {
-  register,
-  login,
-  getMe,
-  changePassword,
-} = require("../controllers/authController");
+const { register, login, getMe } = require("../controllers/authController");
 
 // Rate limit auth routes
 router.use(authLimiter);
@@ -48,21 +43,5 @@ router.post(
 
 // Get current user profile
 router.get("/me", protect, getMe);
-
-// Change password
-router.put(
-  "/change-password",
-  [
-    protect,
-    sanitizeBody,
-    check("currentPassword", "Current password is required").not().isEmpty(),
-    check("newPassword", "New password must be at least 6 characters").isLength(
-      { min: 6 }
-    ),
-    check("confirmPassword", "Confirm password is required").not().isEmpty(),
-    validateRequest,
-  ],
-  changePassword
-);
 
 module.exports = router;
