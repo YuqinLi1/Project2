@@ -232,19 +232,10 @@ const Login = () => {
               />
             </Form.Item>
 
-            <Form.Item>
-              <Form.Item name="remember" valuePropName="checked" noStyle>
-                <Checkbox
-                  checked={rememberMe}
-                  onChange={handleRememberMeChange}
-                >
-                  Remember me
-                </Checkbox>
-              </Form.Item>
-
-              <Link to="/forgot-password" style={{ float: "right" }}>
-                Forgot password?
-              </Link>
+            <Form.Item name="remember" valuePropName="checked" noStyle>
+              <Checkbox checked={rememberMe} onChange={handleRememberMeChange}>
+                Remember me
+              </Checkbox>
             </Form.Item>
 
             <Form.Item>
