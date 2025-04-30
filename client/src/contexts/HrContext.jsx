@@ -1,288 +1,375 @@
-import React, { createContext, useReducer } from "react";
-import api from "../api";
-import { useUi } from "./UiContext";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+import axios from "axios";
+import { message } from "antd";
 
-// Create context
-export const EmployeeContext = createContext();
+// Create the HR context
+const HrContext = createContext();
 
-// Initial state
-const initialState = {
-  profile: null,
-  documents: [],
-  visaStatus: null,
-  loading: false,
-  error: null,
-};
-
-// Reducer
-const employeeReducer = (state, action) => {
-  switch (action.type) {
-    case "SET_LOADING":
-      return {
-        ...state,
-        loading: true,
-      };
-    case "FETCH_PROFILE_SUCCESS":
-      return {
-        ...state,
-        profile: action.payload,
-        loading: false,
-        error: null,
-      };
-    case "UPDATE_PROFILE_SUCCESS":
-      return {
-        ...state,
-        profile: action.payload,
-        loading: false,
-        error: null,
-      };
-    case "FETCH_DOCUMENTS_SUCCESS":
-      return {
-        ...state,
-        documents: action.payload,
-        loading: false,
-        error: null,
-      };
-    case "UPLOAD_DOCUMENT_SUCCESS":
-      return {
-        ...state,
-        documents: [...state.documents, action.payload],
-        loading: false,
-        error: null,
-      };
-    case "FETCH_VISA_STATUS_SUCCESS":
-      return {
-        ...state,
-        visaStatus: action.payload,
-        loading: false,
-        error: null,
-      };
-    case "API_ERROR":
-      return {
-        ...state,
-        loading: false,
-        error: action.payload,
-      };
-    default:
-      return state;
-  }
-};
+// Base API URL
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001/api";
 
 // Provider component
-export const EmployeeProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(employeeReducer, initialState);
-  const { setAlert } = useUi();
+export const HrProvider = ({ children }) => {
+  // State
+  const [employees, setEmployees] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [visaManagement, setVisaManagement] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [registrationTokens, setRegistrationTokens] = useState([]);
+  const [registrationResult, setRegistrationResult] = useState(null);
 
-  // Get profile
-  const getProfile = async () => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.get("/employee/me");
-      dispatch({
-        type: "FETCH_PROFILE_SUCCESS",
-        payload: res.data.data,
-      });
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to fetch profile",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to fetch profile",
-        "error"
-      );
-      return null;
-    }
+  // Helper to handle API errors
+  const handleError = (error) => {
+    console.error("API Error:", error);
+    setError(
+      error.response?.data?.message || error.message || "An error occurred"
+    );
+    setLoading(false);
+    message.error(error.response?.data?.message || "An error occurred");
   };
 
-  // Update profile
-  const updateProfile = async (profileData) => {
-    dispatch({ type: "SET_LOADING" });
+  // Get all employees
+  const getAllEmployees = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await api.put(`/employee/${profileData._id}`, profileData);
-      dispatch({
-        type: "UPDATE_PROFILE_SUCCESS",
-        payload: res.data.data,
-      });
-      setAlert("Profile updated successfully", "success");
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to update profile",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to update profile",
-        "error"
-      );
-      return null;
-    }
-  };
-
-  // Submit onboarding
-  const submitOnboarding = async (formData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.post("/employee/onboarding", formData);
-      dispatch({
-        type: "FETCH_PROFILE_SUCCESS",
-        payload: res.data.data,
-      });
-      setAlert("Onboarding application submitted successfully", "success");
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload:
-          err.response?.data?.message ||
-          "Failed to submit onboarding application",
-      });
-      setAlert(
-        err.response?.data?.message ||
-          "Failed to submit onboarding application",
-        "error"
-      );
-      return null;
-    }
-  };
-
-  // Get documents
-  const getDocuments = async () => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.get("/employee/documents");
-      dispatch({
-        type: "FETCH_DOCUMENTS_SUCCESS",
-        payload: res.data.data,
-      });
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to fetch documents",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to fetch documents",
-        "error"
-      );
-      return null;
-    }
-  };
-
-  // Upload document
-  const uploadDocument = async (formData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.post("/employee/documents", formData, {
+      const response = await axios.get(`${API_URL}/hr/employees`, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      dispatch({
-        type: "UPLOAD_DOCUMENT_SUCCESS",
-        payload: res.data.data,
-      });
-      setAlert("Document uploaded successfully", "success");
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to upload document",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to upload document",
-        "error"
-      );
-      return null;
+      setEmployees(response.data);
+      setLoading(false);
+    } catch (error) {
+      handleError(error);
     }
-  };
+  }, []);
 
-  // Get visa status
-  const getVisaStatus = async () => {
-    dispatch({ type: "SET_LOADING" });
+  // Get employee by ID
+  const getEmployeeById = useCallback(async (id) => {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await api.get("/visa-status/me");
-      dispatch({
-        type: "FETCH_VISA_STATUS_SUCCESS",
-        payload: res.data.data,
-      });
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to fetch visa status",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to fetch visa status",
-        "error"
-      );
-      return null;
-    }
-  };
-
-  // Upload visa document
-  const uploadVisaDocument = async (documentType, formData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.post(
-        "/visa-status/document",
-        {
-          ...formData,
-          documentType,
+      const response = await axios.get(`${API_URL}/hr/employees/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
+      });
+      setSelectedEmployee(response.data);
+      setLoading(false);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      return null;
+    }
+  }, []);
+
+  // Get pending applications
+  const getPendingApplications = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${API_URL}/hr/applications`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setApplications(response.data);
+      setLoading(false);
+    } catch (error) {
+      handleError(error);
+    }
+  }, []);
+
+  // Get application by ID
+  const getApplicationById = useCallback(async (id) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${API_URL}/hr/applications/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setSelectedApplication(response.data);
+      setLoading(false);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      return null;
+    }
+  }, []);
+
+  // Update application status
+  const updateApplicationStatus = useCallback(
+    async (id, status, feedback = "") => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.put(
+          `${API_URL}/hr/applications/${id}/status`,
+          { status, feedback },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        // Update application list
+        setApplications((prev) =>
+          prev.map((app) =>
+            app._id === id ? { ...app, status, feedback } : app
+          )
+        );
+
+        setLoading(false);
+        message.success(
+          `Application ${status === "approved" ? "approved" : "rejected"}`
+        );
+        return response.data;
+      } catch (error) {
+        handleError(error);
+        return null;
+      }
+    },
+    []
+  );
+
+  // Get visa management data
+  const getVisaManagement = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${API_URL}/hr/visa-management`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setVisaManagement(response.data);
+      setLoading(false);
+    } catch (error) {
+      handleError(error);
+    }
+  }, []);
+
+  // Review visa document
+  const reviewVisaDocument = useCallback(
+    async (employeeId, documentId, status, feedback = "") => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.put(
+          `${API_URL}/hr/visa-management/${employeeId}/documents/${documentId}`,
+          { status, feedback },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        // Update visa management data
+        await getVisaManagement();
+
+        setLoading(false);
+        message.success(
+          `Document ${status === "approved" ? "approved" : "rejected"}`
+        );
+        return response.data;
+      } catch (error) {
+        handleError(error);
+        return null;
+      }
+    },
+    [getVisaManagement]
+  );
+
+  // Download document
+  const downloadDocument = useCallback(async (documentId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(
+        `${API_URL}/documents/${documentId}/download`,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
+          responseType: "blob",
         }
       );
 
-      setAlert("Visa document uploaded successfully", "success");
-      // Refresh visa status after upload
-      await getVisaStatus();
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload:
-          err.response?.data?.message || "Failed to upload visa document",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to upload visa document",
-        "error"
-      );
-      return null;
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `document-${documentId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setLoading(false);
+      return true;
+    } catch (error) {
+      handleError(error);
+      return false;
     }
+  }, []);
+
+  // Get registration tokens
+  const getRegistrationTokens = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(`${API_URL}/hr/registration-tokens`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setRegistrationTokens(response.data);
+      setLoading(false);
+    } catch (error) {
+      handleError(error);
+    }
+  }, []);
+
+  // Generate registration token
+  const generateRegistrationToken = useCallback(
+    async (email, name) => {
+      setLoading(true);
+      setError(null);
+      setRegistrationResult(null);
+      try {
+        const response = await axios.post(
+          `${API_URL}/hr/registration-tokens`,
+          { email, name },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        // Update registration tokens
+        await getRegistrationTokens();
+
+        setRegistrationResult({
+          success: true,
+          token: response.data.token,
+          link: `${window.location.origin}/register/${response.data.token}`,
+          message: "Registration token generated successfully",
+        });
+
+        setLoading(false);
+        message.success("Registration token generated successfully");
+        return response.data;
+      } catch (error) {
+        handleError(error);
+        setRegistrationResult({
+          success: false,
+          message:
+            error.response?.data?.message ||
+            "Failed to generate registration token",
+        });
+        return null;
+      }
+    },
+    [getRegistrationTokens]
+  );
+
+  // Send registration email
+  const sendRegistrationEmail = useCallback(
+    async (tokenId) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.post(
+          `${API_URL}/hr/registration-tokens/${tokenId}/send-email`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        // Update registration tokens
+        await getRegistrationTokens();
+
+        setLoading(false);
+        message.success("Registration email sent successfully");
+        return response.data;
+      } catch (error) {
+        handleError(error);
+        return null;
+      }
+    },
+    [getRegistrationTokens]
+  );
+
+  // Clear selection
+  const clearSelection = useCallback(() => {
+    setSelectedEmployee(null);
+    setSelectedApplication(null);
+  }, []);
+
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  // Clear registration result
+  const clearRegistrationResult = useCallback(() => {
+    setRegistrationResult(null);
+  }, []);
+
+  // Context value
+  const value = {
+    employees,
+    applications,
+    visaManagement,
+    selectedEmployee,
+    selectedApplication,
+    loading,
+    error,
+    registrationTokens,
+    registrationResult,
+    getAllEmployees,
+    getEmployeeById,
+    getPendingApplications,
+    getApplicationById,
+    updateApplicationStatus,
+    getVisaManagement,
+    reviewVisaDocument,
+    downloadDocument,
+    getRegistrationTokens,
+    generateRegistrationToken,
+    sendRegistrationEmail,
+    clearSelection,
+    clearError,
+    clearRegistrationResult,
   };
 
-  return (
-    <EmployeeContext.Provider
-      value={{
-        profile: state.profile,
-        documents: state.documents,
-        visaStatus: state.visaStatus,
-        loading: state.loading,
-        error: state.error,
-        getProfile,
-        updateProfile,
-        submitOnboarding,
-        getDocuments,
-        uploadDocument,
-        getVisaStatus,
-        uploadVisaDocument,
-      }}
-    >
-      {children}
-    </EmployeeContext.Provider>
-  );
+  return <HrContext.Provider value={value}>{children}</HrContext.Provider>;
 };
 
-// Custom hook for using employee context
-export const useEmployee = () => {
-  const context = React.useContext(EmployeeContext);
-  if (context === undefined) {
-    throw new Error("useEmployee must be used within an EmployeeProvider");
+// Custom hook to use the HR context
+export const useHr = () => {
+  const context = useContext(HrContext);
+  if (!context) {
+    throw new Error("useHr must be used within an HrProvider");
   }
   return context;
 };
+
+export default HrContext;
