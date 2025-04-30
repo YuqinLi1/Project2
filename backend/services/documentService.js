@@ -21,6 +21,10 @@ const getDocumentById = async (documentId) => {
   return document;
 };
 
+const getDocumentsByEmployeeId = async (employeeId) => {
+  return await Document.find({ employeeId });
+};
+
 const getEmployeeDocuments = async (employeeId, type = null) => {
   const query = { employeeId };
 
@@ -144,4 +148,5 @@ module.exports = {
   reviewVisaDocument,
   deleteDocument,
   getDocumentFilePath,
+  getDocumentsByEmployeeId,
 };

@@ -1,7 +1,42 @@
 const { asyncHandler } = require("../utils/errorHandler");
 const employeeService = require("../services/employeeService");
+const Employee = require("../models/Employee");  // ✅ ADD THIS
+const Document = require("../models/Document")
 
 //employeeController
+
+const checkEmployeeStatusByEmail = asyncHandler(async (req, res) => {
+  const email = req.user.email; // ✅ Already verified and attached by protect middleware
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Email not found in user" });
+  }
+  console.log("check 10" +email);
+  const employee = await Employee.findOne({ email });
+
+  console.log("check 11 " +employee);
+
+  console.log("check 22 " + employee.onboardingStatus);
+
+  if (!employee) {
+    return res.status(200).json({
+      success: true,
+      status: "never submitted",
+      data: null,
+      documents: [],
+    });
+  }
+
+  const documents = await Document.find({ employeeId: employee._id }).select("type fileName _id");
+  console.log("check 13 " + documents);
+
+  return res.status(200).json({
+    success: true,
+    status: employee.onboardingStatus || "never submitted",
+    data: employee,
+    documents,
+  });
+});
 
 const createEmployeeProfile = asyncHandler(async (req, res) => {
   // Create employee profile
@@ -72,6 +107,7 @@ const submitOnboardingApplication = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  checkEmployeeStatusByEmail,
   createEmployeeProfile,
   getEmployeeProfile,
   getMyProfile,

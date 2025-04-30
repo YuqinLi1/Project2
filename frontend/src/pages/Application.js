@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import {
   Container, Form, Grid, Segment, Radio,
   Button, Header, Divider, Message, Dropdown
@@ -94,13 +95,7 @@ const Application = () => {
   const [driverLicenseFile, setDriverLicenseFile] = useState(null);
   const [workAuthorizationFile, setWorkAuthorizationFile] = useState(null);
   const [optReceiptFile, setOptReceiptFile] = useState(null); // only if visaType === 'F1(CPT/OPT)'
-
-  const [isCitizen, setIsCitizen] = useState(null);
-  const [residencyType, setResidencyType] = useState('');
-  const [visaType, setVisaType] = useState('');
-  const [visaTitle, setVisaTitle] = useState('');
-  const [visaStartDate, setVisaStartDate] = useState('');
-  const [visaEndDate, setVisaEndDate] = useState('');
+  const [documentMap, setDocumentMap] = useState({}); // holds uploaded docs by type
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -108,33 +103,48 @@ const Application = () => {
       setUnauthorized(true);
       return;
     }
-
-    const fetchStatus = async () => {
+  
+    const fetchEmployeeStatus = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/employee/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const { status, rejectReason, formData } = res.data;
-
+        const decoded = jwtDecode(token);
+        const userEmail = decoded.email;
+  
+        const res = await axios.post('http://localhost:5000/api/employee/check-status',
+          { email: userEmail },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+  
+        const { status, data, documents } = res.data;
         dispatch(setStatus(status));
-        if (rejectReason) dispatch(setRejectReason(rejectReason));
-        if (formData) dispatch(setFormData(formData));
-
+  
+        // ✅ Alert + Redirect logic
         if (status === 'Approved') {
-          alert('Your application has been approved.');
-          setTimeout(() => navigate('/information'), 1000);
+          alert('The application has been approved.');
+          setTimeout(() => navigate('/information'), 5000);
+        } else if (status === 'pending') {
+          alert('The application is being reviewed.');
+        } else if (status === 'rejected') {
+          alert('The application is rejected, please update and resubmit.');
         }
+  
+        if (status === 'pending' || status === 'rejected') {
+          dispatch(setFormData(data));
+          const map = {};
+          documents.forEach(doc => map[doc.type] = doc);
+          setDocumentMap(map);
+        } else {
+          dispatch(setFormData({}));
+        }
+  
       } catch (err) {
-        console.error('Error fetching application status', err);
-        if (err.response && err.response.status === 401) {
-          setUnauthorized(true);
-        }
+        console.error('Error checking employee status', err);
+        setUnauthorized(true);
       }
     };
-
-    fetchStatus();
+  
+    fetchEmployeeStatus();
   }, [dispatch, navigate]);
-
+  
   const isReadOnly = status === 'Pending';
 
   const handleFileChange = (setter) => (e) => {
@@ -153,6 +163,28 @@ const Application = () => {
     dispatch(updateFormField({ field: 'ecPhone', value: formData.refPhone || '' }));
     dispatch(updateFormField({ field: 'ecEmail', value: formData.refEmail || '' }));
     dispatch(updateFormField({ field: 'ecRelationship', value: formData.refRelationship || '' }));
+  };
+
+  const renderDocumentField = (type, label, setter) => {
+    const doc = documentMap[type];
+    if ((status === 'pending' || status === 'rejected') && doc) {
+      return (
+        <Form.Field>
+          <label>{label}</label>
+          <Header as="h5">Uploaded: {doc.fileName}</Header>
+          <Button size="small" onClick={() => window.open(`http://localhost:5000/api/documents/${doc._id}/preview`, '_blank')}>Preview</Button>
+          <Button size="small" onClick={() => window.open(`http://localhost:5000/api/documents/${doc._id}/download`, '_blank')}>Download</Button>
+        </Form.Field>
+      );
+    }
+    return (
+      <Form.Input
+        label={label}
+        type="file"
+        onChange={(e) => setter(e.target.files[0])}
+        disabled={isReadOnly}
+      />
+    );
   };
 
   const handleSubmit = async () => {
@@ -338,13 +370,13 @@ const Application = () => {
                 />
               </Grid.Column>
               <Grid.Column>
-                <Form.Input
-                  label="Date of Birth"
-                  type="date"
-                  value={formData.dob || ''}
-                  onChange={handleChange('dob')}
-                  readOnly={isReadOnly}
-                />
+              <Form.Input
+                label="Date of Birth"
+                type={isReadOnly ? 'text' : 'date'}
+                value={formData.dob || ''}
+                onChange={handleChange('dob')}
+                readOnly={isReadOnly}
+              />
               </Grid.Column>
               <Grid.Column>
               <Form.Field>
@@ -530,60 +562,41 @@ const Application = () => {
           </Grid>
 
          {/* Upload files */}
-         <Header as="h4">Upload Documents</Header>
-          <Form.Input
-            label="Profile Picture"
-            type="file"
-            onChange={(e) => setProfilePictureFile(e.target.files[0])}
-            disabled={isReadOnly}
-          />
-          <Form.Input
-            label="Driver’s License"
-            type="file"
-            onChange={(e) => setDriverLicenseFile(e.target.files[0])}
-            disabled={isReadOnly}
-          />
-          <Form.Input
-            label="Work Authorization"
-            type="file"
-            onChange={(e) => setWorkAuthorizationFile(e.target.files[0])}
-            disabled={isReadOnly}
-          />
-
-          {formData.visaType === 'F1(CPT/OPT)' && (
-            <Form.Input
-              label="OPT Receipt"
-              type="file"
-              onChange={(e) => setOptReceiptFile(e.target.files[0])}
-              disabled={isReadOnly}
-            />
-          )}
+         {renderDocumentField("Profile Picture", "Profile Picture", setProfilePictureFile)}
+         {renderDocumentField("Driver's License", "Driver’s License", setDriverLicenseFile)}
+         {renderDocumentField("Work Authorization", "Work Authorization", setWorkAuthorizationFile)}
+         {formData.visaType === 'F1(CPT/OPT)' && renderDocumentField("OPT Receipt", "OPT Receipt", setOptReceiptFile)}
 
           {/* Citizenship */}
           {/* Citizenship question */}
           <Form.Field>
-            <label>Are you a permanent resident or citizen of the U.S.?</label>
-            <Form.Group inline>
-              <Form.Field
-                control={Radio}
-                label="Yes"
-                name="citizenship"
-                value="yes"
-                checked={formData.citizenship === 'yes'}
-                onChange={handleChange('citizenship')}
-                disabled={isReadOnly}
-              />
-              <Form.Field
-                control={Radio}
-                label="No"
-                name="citizenship"
-                value="no"
-                checked={formData.citizenship === 'no'}
-                onChange={handleChange('citizenship')}
-                disabled={isReadOnly}
-              />
-            </Form.Group>
-          </Form.Field>
+          <label>Are you a permanent resident or citizen of the U.S.?</label>
+          <Form.Group inline>
+            <Form.Field
+              control={Radio}
+              label="Yes"
+              name="citizenship"
+              value="yes"
+              checked={formData.citizenship === 'yes'}
+              onChange={handleChange('citizenship')}
+              disabled={isReadOnly}
+            />
+            <Form.Field
+              control={Radio}
+              label="No"
+              name="citizenship"
+              value="no"
+              checked={formData.citizenship === 'no'}
+              onChange={handleChange('citizenship')}
+              disabled={isReadOnly}
+            />
+          </Form.Group>
+          {formData.citizenship === 'yes' && (
+            <p style={{ marginLeft: '1em', color: 'gray' }}>
+              Select your residency type (e.g., Green Card or Citizen)
+            </p>
+          )}
+        </Form.Field>
 
           {/* Residency type if yes */}
           {formData.citizenship === 'yes' && (

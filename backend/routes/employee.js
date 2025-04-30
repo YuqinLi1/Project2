@@ -13,12 +13,12 @@ const {
 } = require("../middleware/validation");
 const { check } = require("express-validator");
 const {
+  checkEmployeeStatusByEmail,
   createEmployeeProfile,
   getEmployeeProfile,
   getMyProfile,
   updateEmployeeProfile,
   submitOnboardingApplication,
-  // ❌ REMOVE uploadDocument
 } = require("../controllers/employeeController");
 
 // All routes require authentication
@@ -72,5 +72,7 @@ router.post(
   ],
   createEmployeeProfile
 );
+
+router.post("/check-status", protect, checkEmployeeStatusByEmail);
 
 module.exports = router;
