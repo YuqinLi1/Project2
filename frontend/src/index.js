@@ -8,12 +8,11 @@ import store from "./store"; // ✅ import your Redux store
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <Provider store={store}>
+  <Provider store={store}> {/* ✅ Wrap everything inside Provider */}
     <BrowserRouter>
-      {/* ⛔ Temporarily remove StrictMode for debug */}
-      {/* <React.StrictMode> */}
+      <React.StrictMode>
         <App />
-      {/* </React.StrictMode> */}
+      </React.StrictMode>
     </BrowserRouter>
   </Provider>
 );

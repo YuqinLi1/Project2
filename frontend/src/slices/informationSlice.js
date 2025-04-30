@@ -1,10 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
-console.log("✅ informationSlice loaded");
 
 const initialState = {
-  info: null, // initially no info
+  info: null,
   editInfo: {},
-  mode: 'initial',
+  mode: 'init', // only 'init' or 'edit'
 };
 
 const informationSlice = createSlice({
@@ -12,38 +11,41 @@ const informationSlice = createSlice({
   initialState,
   reducers: {
     setInfo: (state, action) => {
-      console.log("✅ setInfo reducer called with payload:", action.payload);
+      console.log("check 1, reach");
       state.info = action.payload;
     },
     setEditInfo: (state, action) => {
-      console.log("✅ setEditInfo reducer called with payload:", action.payload);
       state.editInfo = action.payload;
     },
     updateEditField: (state, action) => {
       const { field, value } = action.payload;
       const keys = field.split('.');
       let target = state.editInfo;
-    
       for (let i = 0; i < keys.length - 1; i++) {
         const key = keys[i];
-        const isArrayIndex = /^\d+$/.test(keys[i + 1]);
         if (!target[key]) {
-          target[key] = isArrayIndex ? [] : {};
+          target[key] = {};
         }
         target = target[key];
       }
-    
       target[keys[keys.length - 1]] = value;
     },
     setMode: (state, action) => {
-      state.mode = action.payload;
+      state.mode = action.payload; // 'init' or 'edit'
     },
     discardEdit: (state) => {
       state.editInfo = {};
-      state.mode = 'initial';
+      state.mode = 'init';
     },
   },
 });
 
-export const { setInfo, setEditInfo, updateEditField, setMode, discardEdit } = informationSlice.actions;
+export const {
+  setInfo,
+  setEditInfo,
+  updateEditField,
+  setMode,
+  discardEdit,
+} = informationSlice.actions;
+
 export default informationSlice.reducer;

@@ -13,11 +13,12 @@ const createEmployee = async (employeeData, userId) => {
     throw new Error("Employee profile already exists for this user");
   }
 
-  // Create employee
+  // Force onboardingStatus to "pending"
   const employee = await Employee.create({
     ...employeeData,
+    onboardingStatus: "pending",
     userId,
-  });
+  })
 
   return employee;
 };

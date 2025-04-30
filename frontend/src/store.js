@@ -1,11 +1,13 @@
-import { configureStore } from "@reduxjs/toolkit";
-import applicationReducer from "./slices/applicationSlice"; // adjust path if needed
+import { configureStore } from '@reduxjs/toolkit';
+import applicationReducer from './slices/applicationSlice';
+import informationReducer from './slices/informationSlice';
+
 
 const store = configureStore({
   reducer: {
     application: applicationReducer,
-    // add other slices like visa, information if needed
-  },
+    information: informationReducer,
+  }
 });
 
-export default store; 
+export default store;

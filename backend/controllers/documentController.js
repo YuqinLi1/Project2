@@ -15,6 +15,21 @@ const getDocument = asyncHandler(async (req, res) => {
   });
 });
 
+const getDocumentsByEmployeeId = asyncHandler(async (req, res) => {
+  const employeeId = req.params.employeeId;
+
+  if (!employeeId) {
+    return res.status(400).json({ success: false, message: "Employee ID is required" });
+  }
+
+  const documents = await documentService.getDocumentsByEmployeeId(employeeId);
+
+  res.status(200).json({
+    success: true,
+    data: documents,
+  });
+});
+
 // Upload multiple documents
 const uploadMultipleDocuments = asyncHandler(async (req, res) => {
   const { employeeId } = req.body;
@@ -120,4 +135,5 @@ module.exports = {
   downloadDocument,
   previewDocument,
   deleteDocument,
+  getDocumentsByEmployeeId,
 };

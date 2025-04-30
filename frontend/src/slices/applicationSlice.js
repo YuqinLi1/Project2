@@ -11,6 +11,7 @@ const applicationSlice = createSlice({
   initialState,
   reducers: {
     setStatus: (state, action) => {
+      console.log("check 2, reach");
       state.status = action.payload;
     },
     setRejectReason: (state, action) => {
