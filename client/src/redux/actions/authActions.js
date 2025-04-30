@@ -67,12 +67,11 @@ export const register = (formData, token, history) => async (dispatch) => {
   }
 };
 
-// Login User
-export const login = (credentials, history) => async (dispatch) => {
+export const login = (username, password, history) => async (dispatch) => {
   try {
     dispatch({ type: LOGIN_REQUEST });
 
-    const res = await api.post("/auth/login", credentials);
+    const res = await api.post("/auth/login", { username, password }); // ✅
 
     dispatch({
       type: LOGIN_SUCCESS,
@@ -81,9 +80,8 @@ export const login = (credentials, history) => async (dispatch) => {
 
     dispatch(loadUser());
 
-    // Redirect based on user role
     const redirectPath = res.data.user.role === "hr" ? "/hr" : "/employee";
-    history.push(redirectPath);
+    if (history) history.push(redirectPath); // optional redirect if history provided
   } catch (err) {
     dispatch({
       type: LOGIN_FAIL,

@@ -24,9 +24,7 @@ import {
   FileTextOutlined,
   IdcardOutlined,
   BellOutlined,
-  CheckCircleOutlined,
   ClockCircleOutlined,
-  CloseCircleOutlined,
   GlobalOutlined,
   CalendarOutlined,
   FileOutlined,
@@ -40,7 +38,6 @@ import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions";
 
 // Import custom hooks
-import useWindowSize from "../../hooks/useWindowSize";
 import useAuth from "../../hooks/useAuth";
 
 const { Header, Content, Sider } = Layout;
@@ -59,7 +56,6 @@ const Dashboard = () => {
     (state) => state.ui || { activeMenuItem: "dashboard" }
   );
 
-  const [collapsed, setCollapsed] = useState(windowSize.width < 768);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -79,11 +75,6 @@ const Dashboard = () => {
       })
     );
   }, [isAuthenticated, dispatch, navigate]);
-
-  // Update collapsed state when window size changes
-  useEffect(() => {
-    setCollapsed(windowSize.width < 768);
-  }, [windowSize.width]);
 
   // Handle menu item click
   const handleMenuClick = (key) => {
