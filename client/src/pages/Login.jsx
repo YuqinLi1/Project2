@@ -23,7 +23,7 @@ const Login = () => {
       });
       if (response.status === 200) {
         localStorage.setItem('token', response.data.token); 
-        navigate('/employee/onboarding');
+        navigate('/application');
       } else {
         setError('Error, please check username and password');
       }

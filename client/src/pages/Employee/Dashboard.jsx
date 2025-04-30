@@ -46,7 +46,6 @@ const { Title, Text } = Typography;
 const Dashboard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const windowSize = useWindowSize();
 
   // Redux state
   const { isAuthenticated, user } = useAuth();
@@ -186,9 +185,6 @@ const Dashboard = () => {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={(value) => setCollapsed(value)}
         theme="light"
         breakpoint="md"
       >
@@ -201,7 +197,7 @@ const Dashboard = () => {
           }}
         >
           <GlobalOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
-          {!collapsed && (
+          {(
             <Title level={4} style={{ margin: "0 0 0 12px" }}>
               Employee Portal
             </Title>
@@ -275,7 +271,7 @@ const Dashboard = () => {
 
         <Content
           style={{
-            margin: windowSize.width < 768 ? "12px" : "24px",
+            margin: "24px",
             background: "#f0f2f5",
             minHeight: 280,
           }}

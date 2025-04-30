@@ -67,28 +67,20 @@ export const register = (formData, token, history) => async (dispatch) => {
   }
 };
 
-export const login = (username, password, history) => async (dispatch) => {
+
+// Login User
+export const login = (username, password) => async (dispatch) => {
   try {
     dispatch({ type: LOGIN_REQUEST });
 
-    const res = await api.post("/auth/login", { username, password }); // ✅
+    const { data } = await api.post("/auth/login", { username, password });
 
-    dispatch({
-      type: LOGIN_SUCCESS,
-      payload: res.data,
-    });
-
+    dispatch({ type: LOGIN_SUCCESS, payload: data });
     dispatch(loadUser());
-
-    const redirectPath = res.data.user.role === "hr" ? "/hr" : "/employee";
-    if (history) history.push(redirectPath); // optional redirect if history provided
   } catch (err) {
-    dispatch({
-      type: LOGIN_FAIL,
-      payload: err.response?.data?.message || "Invalid credentials",
-    });
-
-    dispatch(setAlert(err.response?.data?.message || "Login failed", "error"));
+    const message = err.response?.data?.message || "Invalid credentials";
+    dispatch({ type: LOGIN_FAIL, payload: message });
+    dispatch(setAlert(message, "error"));
   }
 };
 
@@ -96,24 +88,6 @@ export const login = (username, password, history) => async (dispatch) => {
 export const logout = (history) => (dispatch) => {
   dispatch({ type: LOGOUT });
   history.push("/login");
-};
-
-// Change Password
-export const changePassword = (passwordData) => async (dispatch) => {
-  try {
-    await api.put("/auth/change-password", passwordData);
-
-    dispatch(setAlert("Password changed successfully", "success"));
-    return true;
-  } catch (err) {
-    dispatch(
-      setAlert(
-        err.response?.data?.message || "Failed to change password",
-        "error"
-      )
-    );
-    return false;
-  }
 };
 
 // Clear Errors
