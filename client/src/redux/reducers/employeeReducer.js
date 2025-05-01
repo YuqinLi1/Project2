@@ -2,98 +2,101 @@ import {
   FETCH_PROFILE_REQUEST,
   FETCH_PROFILE_SUCCESS,
   FETCH_PROFILE_FAIL,
-  UPDATE_PROFILE_REQUEST,
-  UPDATE_PROFILE_SUCCESS,
-  UPDATE_PROFILE_FAIL,
   ONBOARDING_SUBMIT_REQUEST,
   ONBOARDING_SUBMIT_SUCCESS,
   ONBOARDING_SUBMIT_FAIL,
-  FETCH_DOCUMENTS_REQUEST,
-  FETCH_DOCUMENTS_SUCCESS,
-  FETCH_DOCUMENTS_FAIL,
   UPLOAD_DOCUMENT_REQUEST,
   UPLOAD_DOCUMENT_SUCCESS,
   UPLOAD_DOCUMENT_FAIL,
-  FETCH_VISA_STATUS_REQUEST,
-  FETCH_VISA_STATUS_SUCCESS,
-  FETCH_VISA_STATUS_FAIL,
-  CLEAR_ERRORS,
 } from "../types";
 
 const initialState = {
-  profile: null,
-  documents: [],
-  visaStatus: null,
+  onboardingApplication: null,
   loading: false,
+  submitting: false,
+  uploadLoading: false,
   error: null,
+  submitError: null,
+  employeeInfo: null,
+  profileLoading: false,
+  profileError: null,
 };
 
-export default function (state = initialState, action) {
-  const { type, payload } = action;
-
-  switch (type) {
-    case FETCH_PROFILE_REQUEST:
-    case UPDATE_PROFILE_REQUEST:
+const employmentReducer = (state = initialState, action) => {
+  switch (action.type) {
+    // Onboarding Application Submission
     case ONBOARDING_SUBMIT_REQUEST:
-    case FETCH_DOCUMENTS_REQUEST:
-    case UPLOAD_DOCUMENT_REQUEST:
-    case FETCH_VISA_STATUS_REQUEST:
       return {
         ...state,
-        loading: true,
-      };
-    case FETCH_PROFILE_SUCCESS:
-    case UPDATE_PROFILE_SUCCESS:
-      return {
-        ...state,
-        profile: payload,
-        loading: false,
-        error: null,
+        submitting: true,
+        submitError: null,
       };
     case ONBOARDING_SUBMIT_SUCCESS:
       return {
         ...state,
-        loading: false,
-        error: null,
+        submitting: false,
+        onboardingApplication: action.payload,
+        submitError: null,
       };
-    case FETCH_DOCUMENTS_SUCCESS:
+    case ONBOARDING_SUBMIT_FAIL:
       return {
         ...state,
-        documents: payload,
-        loading: false,
+        submitting: false,
+        submitError: action.payload,
+      };
+
+    // Document Upload
+    case UPLOAD_DOCUMENT_REQUEST:
+      return {
+        ...state,
+        uploadLoading: true,
         error: null,
       };
     case UPLOAD_DOCUMENT_SUCCESS:
       return {
         ...state,
-        documents: [...state.documents, payload],
-        loading: false,
-        error: null,
+        uploadLoading: false,
+        onboardingApplication: {
+          ...state.onboardingApplication,
+          documents: {
+            ...(state.onboardingApplication?.documents || {}),
+            [action.payload.documentType]: action.payload,
+          },
+        },
       };
-    case FETCH_VISA_STATUS_SUCCESS:
+    case UPLOAD_DOCUMENT_FAIL:
       return {
         ...state,
-        visaStatus: payload,
-        loading: false,
-        error: null,
+        uploadLoading: false,
+        error: action.payload,
+      };
+
+    // Profile Fetching
+    case FETCH_PROFILE_REQUEST:
+      return {
+        ...state,
+        profileLoading: true,
+        profileError: null,
+      };
+    case FETCH_PROFILE_SUCCESS:
+      return {
+        ...state,
+        profileLoading: false,
+        employeeInfo: action.payload,
+        onboardingApplication: action.payload.onboardingApplication || null,
+        profileError: null,
       };
     case FETCH_PROFILE_FAIL:
-    case UPDATE_PROFILE_FAIL:
-    case ONBOARDING_SUBMIT_FAIL:
-    case FETCH_DOCUMENTS_FAIL:
-    case UPLOAD_DOCUMENT_FAIL:
-    case FETCH_VISA_STATUS_FAIL:
       return {
         ...state,
-        loading: false,
-        error: payload,
+        profileLoading: false,
+        profileError: action.payload,
       };
-    case CLEAR_ERRORS:
-      return {
-        ...state,
-        error: null,
-      };
+
+    // Default case
     default:
       return state;
   }
-}
+};
+
+export default employmentReducer;

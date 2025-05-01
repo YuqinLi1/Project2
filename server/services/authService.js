@@ -45,24 +45,34 @@ const registerUser = async (userData, registrationToken) => {
 };
 
 const loginUser = async (username, password) => {
-  // Find user
-  const user = await User.findOne({ username });
+  try {
+    // Find user
+    console.log("Looking for user with username:", username);
+    const user = await User.findOne({ username });
 
-  if (!user) {
-    throw new Error("Invalid credentials");
+    if (!user) {
+      console.log("User not found with username:", username);
+      throw new Error("Invalid credentials");
+    }
+
+    // Check password
+    console.log("Checking password for user:", username);
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      console.log("Password mismatch for user:", username);
+      throw new Error("Invalid credentials");
+    }
+
+    // Generate auth token
+    console.log("Generating auth token for user:", username);
+    const token = createAuthToken(user);
+
+    return { user, token };
+  } catch (error) {
+    console.error("Error during login process:", error);
+    throw error;
   }
-
-  // Check password
-  const isMatch = await user.comparePassword(password);
-
-  if (!isMatch) {
-    throw new Error("Invalid credentials");
-  }
-
-  // Generate auth token
-  const token = createAuthToken(user);
-
-  return { user, token };
 };
 
 const getUserById = async (userId) => {

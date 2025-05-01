@@ -55,9 +55,8 @@ import {
 } from "../../redux/actions/employmentActions";
 import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions"; // Replacing setActiveMenuItem
+import { useAuth } from "../../contexts/AuthContext";
 
-// Import custom hooks
-import useAuth from "../../hooks/useAuth"; // Updated from useAuth
 import useWindowSize from "../../hooks/useWindowSize"; // Updated from useWindowSize
 
 const { Header, Content, Sider } = Layout;
@@ -72,14 +71,25 @@ const PersonalInfo = () => {
   // Redux state
   const { isAuthenticated, user } = useAuth();
   const {
-    employeeInfo,
-    loading,
-    updateLoading,
-    downloadLoading,
-    previewLoading,
-    error,
-    updateError,
-  } = useSelector((state) => state.employment);
+    employeeInfo = null,
+    loading = false,
+    updateLoading = false,
+    downloadLoading = false,
+    previewLoading = false,
+    error = null,
+    updateError = null,
+  } = useSelector((state) => {
+    const employmentState = state.employment || {};
+    return {
+      employeeInfo: employmentState.employeeInfo,
+      loading: employmentState.profileLoading,
+      updateLoading: employmentState.updateLoading,
+      downloadLoading: employmentState.downloadLoading,
+      previewLoading: employmentState.previewLoading,
+      error: employmentState.profileError,
+      updateError: employmentState.updateError,
+    };
+  });
   const { activeMenuItem } = useSelector(
     (state) => state.ui || { activeMenuItem: "personal-info" }
   );
@@ -104,10 +114,10 @@ const PersonalInfo = () => {
   }, [windowSize.width]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login");
-      return;
-    }
+    // if (!isAuthenticated) {
+    //   navigate("/login");
+    //   return;
+    // }
 
     // Fetch employee info when component mounts
     // Using getProfile as replacement for getEmployeeInfo

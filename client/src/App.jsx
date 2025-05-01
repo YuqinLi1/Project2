@@ -1,5 +1,6 @@
+// App.jsx
 import React from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // Import pages
 import Login from "./pages/Login";
@@ -10,18 +11,6 @@ import PersonalInfo from "./pages/Employee/PersonalInfo";
 import VisaManagement from "./pages/Employee/VisaManagement";
 import HrLogin from "./pages/HR/Login";
 import HrDashboard from "./pages/HR/Dashboard";
-import ProtectedRoute from "./components/common/ProtectedRoute";
-
-const EmployeeLayout = () => {
-  console.log("EmployeeLayout rendered");
-
-  return (
-    <div style={{ padding: "2em" }}>
-      <h2>Employee Layout</h2>
-      <Outlet />
-    </div>
-  );
-};
 
 function App() {
   return (
@@ -31,59 +20,18 @@ function App() {
       <Route path="/register/:token" element={<Registration />} />
       <Route path="/hr/login" element={<HrLogin />} />
 
-      {/* Employee Protected Routes */}
-      <Route path="/employee" element={<EmployeeLayout />}>
-      <Route index element={<Navigate to="dashboard" replace />} />
-        <Route
-          path="dashboard"
-          element={
-            <ProtectedRoute role="employee">
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="onboarding"
-          element={
-            <ProtectedRoute role="employee">
-              <Onboarding />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="personal-info"
-          element={
-            <ProtectedRoute role="employee">
-              <PersonalInfo />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="visa-status"
-          element={
-            <ProtectedRoute role="employee">
-              <VisaManagement />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
+      {/* Employee – 暂时不做鉴权，直接渲染 */}
+      <Route path="/employee/dashboard" element={<Dashboard />} />
+      <Route path="/employee/onboarding" element={<Onboarding />} />
+      <Route path="/employee/personal-info" element={<PersonalInfo />} />
+      <Route path="/employee/visa-status" element={<VisaManagement />} />
 
-      {/* HR Protected Routes */}
-      <Route path="/hr">
-        <Route
-          path="dashboard"
-          element={
-            <ProtectedRoute role="hr">
-              <HrDashboard />
-            </ProtectedRoute>
-          }
-        />
-        {/* Add other HR routes here */}
-      </Route>
+      {/* HR – 同样取消鉴权，直接渲染 */}
+      <Route path="/hr/dashboard" element={<HrDashboard />} />
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/login" />} />
-      <Route path="*" element={<Navigate to="/login" />} />
+      {/* 根路径和 404 都跳到登录 */}
+      <Route path="/" element={<Dashboard />} />
+      <Route path="*" element={<Dashboard />} />
     </Routes>
   );
 }

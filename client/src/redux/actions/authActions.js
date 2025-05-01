@@ -67,7 +67,6 @@ export const register = (formData, token, history) => async (dispatch) => {
   }
 };
 
-
 // Login User
 export const login = (username, password) => async (dispatch) => {
   try {
@@ -75,19 +74,32 @@ export const login = (username, password) => async (dispatch) => {
 
     const { data } = await api.post("/auth/login", { username, password });
 
+    // Store the token in localStorage for persistent authentication
+    localStorage.setItem("token", data.token);
+    if (data.user && data.user.role) {
+      localStorage.setItem("userRole", data.user.role);
+    }
+
     dispatch({ type: LOGIN_SUCCESS, payload: data });
     dispatch(loadUser());
+
+    // No need to manually navigate here - this will be handled by the component
+    // after the Redux state is updated
+    return { success: true, role: data.user?.role };
   } catch (err) {
     const message = err.response?.data?.message || "Invalid credentials";
     dispatch({ type: LOGIN_FAIL, payload: message });
     dispatch(setAlert(message, "error"));
+    return { success: false, message };
   }
 };
 
 // Logout
-export const logout = (history) => (dispatch) => {
+export const logout = () => (dispatch) => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("userRole");
   dispatch({ type: LOGOUT });
-  history.push("/login");
+  // No need to manually navigate here - this will be handled by the component
 };
 
 // Clear Errors

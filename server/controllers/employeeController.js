@@ -29,8 +29,10 @@ const getEmployeeProfile = asyncHandler(async (req, res) => {
  * @access  Private (Employee)
  */
 const getMyProfile = asyncHandler(async (req, res) => {
+  console.log("check 1 ", res);
   // Get employee profile
   const employee = await employeeService.getEmployeeByUserId(req.user.id);
+  console.log("check 2 ", employee);
 
   res.status(200).json({
     success: true,

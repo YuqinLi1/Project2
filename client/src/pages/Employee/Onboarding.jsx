@@ -50,10 +50,10 @@ import {
 } from "../../redux/actions/employmentActions";
 import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions";
+import { useAuth } from "../../contexts/AuthContext";
 
 // Import custom hooks
 // Using default exports from the hooks as that's what's available
-import useAuth from "../../hooks/useAuth";
 import useWindowSize from "../../hooks/useWindowSize";
 import useLocalStorage from "../../hooks/useLocalStorage";
 
@@ -84,13 +84,23 @@ const Onboarding = () => {
   // Redux state
   const { isAuthenticated, user } = useAuth();
   const {
-    onboardingApplication,
-    loading,
-    submitting,
-    uploadLoading,
-    error,
-    submitError,
-  } = useSelector((state) => state.employment);
+    onboardingApplication = null,
+    loading = false,
+    submitting = false,
+    uploadLoading = false,
+    error = null,
+    submitError = null,
+  } = useSelector((state) => {
+    const employmentState = state.employment || {};
+    return {
+      onboardingApplication: employmentState.onboardingApplication,
+      loading: employmentState.loading,
+      submitting: employmentState.submitting,
+      uploadLoading: employmentState.uploadLoading,
+      error: employmentState.error,
+      submitError: employmentState.submitError,
+    };
+  });
   const { activeMenuItem } = useSelector(
     (state) => state.ui || { activeMenuItem: "onboarding" }
   );
@@ -127,10 +137,10 @@ const Onboarding = () => {
   }, [windowSize.width]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login");
-      return;
-    }
+    // if (!isAuthenticated) {
+    //   navigate("/login");
+    //   return;
+    // }
 
     // Fetch onboarding application when component mounts
     // Using getProfile as a replacement for getOnboardingApplication

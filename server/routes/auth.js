@@ -8,12 +8,7 @@ const {
   validateEmail,
 } = require("../middleware/validation");
 const { check } = require("express-validator");
-const {
-  register,
-  login,
-  getMe,
-  changePassword,
-} = require("../controllers/authController");
+const { register, login, getMe } = require("../controllers/authController");
 
 // Rate limit auth routes
 router.use(authLimiter);
