@@ -23,11 +23,6 @@ const getEmployeeProfile = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Get current employee profile
- * @route   GET /api/employee/me
- * @access  Private (Employee)
- */
 const getMyProfile = asyncHandler(async (req, res) => {
   console.log("check 1 ", res);
   // Get employee profile
@@ -55,27 +50,54 @@ const updateEmployeeProfile = asyncHandler(async (req, res) => {
 });
 
 const submitOnboardingApplication = asyncHandler(async (req, res) => {
-  // Get employee
-  const employee = await employeeService.getEmployeeByUserId(req.user.id);
+  try {
+    // Parse application data from JSON
+    const applicationData = JSON.parse(req.body.applicationData);
 
-  // Submit onboarding application
-  const application = await employeeService.submitOnboardingApplication(
-    employee._id,
-    req.body
-  );
+    // Get employee by user ID
+    const employee = await employeeService.getEmployeeByUserId(req.user.id);
 
-  res.status(200).json({
-    success: true,
-    message: "Onboarding application submitted successfully",
-    data: application,
-  });
+    // Handle document uploads
+    const documentPromises = Object.entries(req.files || {}).map(
+      async ([documentType, file]) => {
+        return await documentService.createDocument({
+          employeeId: employee._id,
+          type: documentType,
+          fileName: file.name,
+          fileUrl: file.path,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          status: "pending",
+        });
+      }
+    );
+
+    // Wait for all documents to be processed
+    const documents = await Promise.all(documentPromises);
+
+    // Submit onboarding application with documents
+    const application = await employeeService.submitOnboardingApplication(
+      employee._id,
+      applicationData,
+      documents
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Onboarding application submitted successfully",
+      data: {
+        application,
+        documents,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });
 
-/**
- * @desc    Get employee documents
- * @route   GET /api/employee/documents
- * @access  Private (Employee)
- */
 const getEmployeeDocuments = asyncHandler(async (req, res) => {
   // Get employee
   const employee = await employeeService.getEmployeeByUserId(req.user.id);
@@ -89,11 +111,6 @@ const getEmployeeDocuments = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Upload employee document
- * @route   POST /api/employee/documents
- * @access  Private (Employee)
- */
 const uploadDocument = asyncHandler(async (req, res) => {
   const { type } = req.body;
 

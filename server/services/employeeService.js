@@ -75,7 +75,16 @@ const searchEmployees = async (searchTerm) => {
   }).sort({ lastName: 1, firstName: 1 });
 };
 
-const submitOnboardingApplication = async (employeeId, applicationData) => {
+const submitOnboardingApplication = async (
+  employeeId,
+  applicationData,
+  documents = []
+) => {
+  // Validate application data
+  if (!applicationData.personalInfo || !applicationData.visaInfo) {
+    throw new Error("Incomplete application data");
+  }
+
   // Get the employee
   const employee = await Employee.findById(employeeId);
 
@@ -84,8 +93,13 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
   }
 
   // Update employee data
-  Object.assign(employee, applicationData);
-  employee.onboardingStatus = "pending";
+  Object.assign(employee, {
+    personalInfo: applicationData.personalInfo,
+    address: applicationData.address,
+    contactInfo: applicationData.contactInfo,
+    emergencyContacts: applicationData.emergencyContacts,
+    onboardingStatus: "pending",
+  });
   await employee.save();
 
   // Create or update application
@@ -95,44 +109,53 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
     application = new Application({
       employeeId,
       status: "pending",
+      submittedDocuments: documents.map((doc) => doc._id),
     });
   } else {
     application.status = "pending";
     application.feedback = "";
     application.reviewedBy = null;
+    application.submittedDocuments = documents.map((doc) => doc._id);
   }
 
   await application.save();
 
   // Create or update visa status if applicable
-  if (!applicationData.isPermanentResident && applicationData.visaType) {
+  if (!applicationData.visaInfo.isUSCitizenOrPermanentResident) {
     let visaStatus = await VisaStatus.findOne({ employeeId });
 
     if (!visaStatus) {
       visaStatus = new VisaStatus({
         employeeId,
-        isPermanentResident: applicationData.isPermanentResident,
-        visaType: applicationData.visaType,
-        visaTitle: applicationData.visaTitle,
-        startDate: applicationData.startDate,
-        endDate: applicationData.endDate,
+        isPermanentResident:
+          applicationData.visaInfo.isUSCitizenOrPermanentResident,
+        visaType: applicationData.visaInfo.workAuthType,
+        visaTitle: applicationData.visaInfo.otherVisaType,
+        startDate: applicationData.visaInfo.workAuthStartDate,
+        endDate: applicationData.visaInfo.workAuthEndDate,
         currentStep:
-          applicationData.visaType === "F1(CPT/OPT)" ? "OPT Receipt" : null,
-        documents: [],
+          applicationData.visaInfo.workAuthType === "F1(CPT/OPT)"
+            ? "OPT Receipt"
+            : null,
+        documents: documents.map((doc) => doc._id),
       });
     } else {
-      visaStatus.isPermanentResident = applicationData.isPermanentResident;
-      visaStatus.visaType = applicationData.visaType;
-      visaStatus.visaTitle = applicationData.visaTitle;
-      visaStatus.startDate = applicationData.startDate;
-      visaStatus.endDate = applicationData.endDate;
+      visaStatus.isPermanentResident =
+        applicationData.visaInfo.isUSCitizenOrPermanentResident;
+      visaStatus.visaType = applicationData.visaInfo.workAuthType;
+      visaStatus.visaTitle = applicationData.visaInfo.otherVisaType;
+      visaStatus.startDate = applicationData.visaInfo.workAuthStartDate;
+      visaStatus.endDate = applicationData.visaInfo.workAuthEndDate;
 
       if (
-        applicationData.visaType === "F1(CPT/OPT)" &&
+        applicationData.visaInfo.workAuthType === "F1(CPT/OPT)" &&
         visaStatus.currentStep === null
       ) {
         visaStatus.currentStep = "OPT Receipt";
       }
+
+      // Update documents in visa status
+      visaStatus.documents = documents.map((doc) => doc._id);
     }
 
     await visaStatus.save();
