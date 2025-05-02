@@ -175,91 +175,6 @@ const PersonalInfoForm = ({ initialValues = {}, onSubmit, loading }) => {
           </Col>
         </Row>
 
-        <Divider>Address Information</Divider>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Controller
-              name="currentAddress.building"
-              control={control}
-              render={({ field }) => (
-                <Input
-                  label="Building/Apt #"
-                  placeholder="Enter building or apt number"
-                  {...field}
-                />
-              )}
-            />
-          </Col>
-          <Col span={12}>
-            <Controller
-              name="currentAddress.street"
-              control={control}
-              rules={{ required: "Street is required" }}
-              render={({ field }) => (
-                <Input
-                  label="Street"
-                  placeholder="Enter street name"
-                  error={errors.currentAddress?.street?.message}
-                  required
-                  {...field}
-                />
-              )}
-            />
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <Controller
-              name="currentAddress.city"
-              control={control}
-              rules={{ required: "City is required" }}
-              render={({ field }) => (
-                <Input
-                  label="City"
-                  placeholder="Enter city"
-                  error={errors.currentAddress?.city?.message}
-                  required
-                  {...field}
-                />
-              )}
-            />
-          </Col>
-          <Col span={8}>
-            <Controller
-              name="currentAddress.state"
-              control={control}
-              rules={{ required: "State is required" }}
-              render={({ field }) => (
-                <Input
-                  label="State"
-                  placeholder="Enter state"
-                  error={errors.currentAddress?.state?.message}
-                  required
-                  {...field}
-                />
-              )}
-            />
-          </Col>
-          <Col span={8}>
-            <Controller
-              name="currentAddress.zip"
-              control={control}
-              rules={{ required: "Zip code is required" }}
-              render={({ field }) => (
-                <Input
-                  label="Zip Code"
-                  placeholder="Enter zip code"
-                  error={errors.currentAddress?.zip?.message}
-                  required
-                  {...field}
-                />
-              )}
-            />
-          </Col>
-        </Row>
-
         <Divider>Contact Information</Divider>
 
         <Row gutter={16}>
@@ -293,12 +208,6 @@ const PersonalInfoForm = ({ initialValues = {}, onSubmit, loading }) => {
             />
           </Col>
         </Row>
-
-        <Form.Item style={{ marginTop: 24 }}>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            Save Information
-          </Button>
-        </Form.Item>
       </Form>
     </Card>
   );

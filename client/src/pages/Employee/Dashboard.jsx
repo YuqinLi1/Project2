@@ -30,14 +30,13 @@ import {
   FileOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import moment from "moment";
+import { jwtDecode } from "jwt-decode";
 
 // Import actions
 import { getProfile } from "../../redux/actions/employmentActions";
 import { logout } from "../../redux/actions/authActions";
 import { setAlert } from "../../redux/actions/uiActions";
 import { useAuth } from "../../contexts/AuthContext";
-import useWindowSize from "../../hooks/useWindowSize";
 
 const { Header, Content, Sider } = Layout;
 const { Title, Text } = Typography;
@@ -45,7 +44,8 @@ const { Title, Text } = Typography;
 const Dashboard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const windowSize = useWindowSize();
+  const [userEmail, setUserEmail] = useState("");
+  const [unauthorized, setUnauthorized] = useState(false);
 
   const { user } = useAuth();
 
@@ -65,23 +65,8 @@ const Dashboard = () => {
   };
   const { activeMenuItem } = uiState;
 
-  // Local state
-  const [collapsed, setCollapsed] = useState(windowSize.width < 768);
-
-  // Update collapsed state when window size changes
   useEffect(() => {
-    setCollapsed(windowSize.width < 768);
-  }, [windowSize.width]);
 
-  useEffect(() => {
-    // Check if we have a token before trying to load data
-    // const token = localStorage.getItem("token");
-    // if (!token) {
-    //   navigate("/login");
-    //   return;
-    // }
-
-    // Fetch employee profile data
     dispatch(getProfile());
 
     // Set active menu item
@@ -93,6 +78,26 @@ const Dashboard = () => {
       })
     );
   }, [dispatch, navigate]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setUnauthorized(true);
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode(token);
+      setUserEmail(decoded.email);
+    } catch (err) {
+      setUnauthorized(true);
+    }
+  }, []);
+
+  if (unauthorized) {
+    return <Alert message="401 Unauthorized" type="error" showIcon />;
+  }
+
 
   // Handle menu item click
   const handleMenuClick = (key) => {
@@ -187,9 +192,6 @@ const Dashboard = () => {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={(value) => setCollapsed(value)}
         theme="light"
         breakpoint="md"
       >
@@ -202,7 +204,7 @@ const Dashboard = () => {
           }}
         >
           <GlobalOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
-          {!collapsed && (
+          {(
             <Title level={4} style={{ margin: "0 0 0 12px" }}>
               Employee Portal
             </Title>
@@ -241,456 +243,6 @@ const Dashboard = () => {
           ]}
         />
       </Sider>
-
-      <Layout>
-        <Header
-          style={{
-            background: "#fff",
-            padding: "0 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            boxShadow: "0 1px 4px rgba(0, 21, 41, 0.08)",
-          }}
-        >
-          <Title level={3} style={{ margin: 0 }}>
-            Dashboard
-          </Title>
-          <Space>
-            <Badge count={emptyNotifications.filter((n) => !n.read).length}>
-              <Button type="text" icon={<BellOutlined />} size="large" />
-            </Badge>
-            <Avatar
-              icon={<UserOutlined />}
-              src={employeeInfo?.personalInfo?.profilePicture}
-            />
-            <Text>
-              {employeeInfo?.personalInfo?.firstName ||
-                user?.firstName ||
-                "User"}{" "}
-              {employeeInfo?.personalInfo?.lastName || user?.lastName || ""}
-            </Text>
-            <Button type="primary" danger onClick={handleLogout}>
-              Logout
-            </Button>
-          </Space>
-        </Header>
-
-        <Content
-          style={{
-            margin: windowSize.width < 768 ? "12px" : "24px",
-            background: "#f0f2f5",
-            minHeight: 280,
-          }}
-        >
-          {error && (
-            <Alert
-              message="Error"
-              description={error}
-              type="error"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-
-          <Title level={4} style={{ marginBottom: 24 }}>
-            Welcome,{" "}
-            {employeeInfo?.personalInfo?.firstName || user?.firstName || "User"}
-            !
-          </Title>
-
-          {/* Status Cards */}
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Onboarding Status"
-                  value={onboardingStatus || "Not Started"}
-                  valueStyle={{ color: getStatusColor(onboardingStatus) }}
-                  prefix={<FileTextOutlined />}
-                />
-                <div style={{ marginTop: 16 }}>
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={() => handleMenuClick("onboarding")}
-                    danger={onboardingStatus === "Rejected"}
-                  >
-                    {onboardingStatus === "Rejected"
-                      ? "Review & Resubmit"
-                      : onboardingStatus === "Pending"
-                      ? "View Status"
-                      : onboardingStatus === "Approved"
-                      ? "View Details"
-                      : "Complete Onboarding"}
-                  </Button>
-                </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Profile Completion"
-                  value={employeeInfo?.profileCompletion || "0%"}
-                  prefix={<UserOutlined />}
-                />
-                <div style={{ marginTop: 16 }}>
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={() => handleMenuClick("personal-info")}
-                  >
-                    Update Profile
-                  </Button>
-                </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Visa Status"
-                  value={employeeInfo?.employment?.visaType || "N/A"}
-                  prefix={<GlobalOutlined />}
-                />
-                <div style={{ marginTop: 16 }}>
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={() => handleMenuClick("visa-status")}
-                    disabled={!employeeInfo?.employment?.visaType}
-                  >
-                    Manage Visa
-                  </Button>
-                </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} sm={12} md={6}>
-              <Card>
-                <Statistic
-                  title="Days Remaining"
-                  value={daysRemaining || "N/A"}
-                  valueStyle={{
-                    color:
-                      daysRemaining < 30
-                        ? "#f5222d"
-                        : daysRemaining < 90
-                        ? "#faad14"
-                        : "#52c41a",
-                  }}
-                  prefix={<CalendarOutlined />}
-                  suffix={daysRemaining ? "days" : ""}
-                />
-                <div style={{ marginTop: 16 }}>
-                  <Tag color={getVisaBadgeColor()}>
-                    {daysRemaining < 30
-                      ? "Critical"
-                      : daysRemaining < 90
-                      ? "Warning"
-                      : "Good Standing"}
-                  </Tag>
-                </div>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Alerts Section */}
-          <div style={{ marginTop: 24 }}>
-            {onboardingStatus === "Rejected" && (
-              <Alert
-                message="Action Required"
-                description="Your onboarding application has been rejected. Please review the feedback and resubmit."
-                type="error"
-                showIcon
-                action={
-                  <Button
-                    size="small"
-                    danger
-                    onClick={() => handleMenuClick("onboarding")}
-                  >
-                    Review & Resubmit
-                  </Button>
-                }
-                style={{ marginBottom: 16 }}
-              />
-            )}
-
-            {employeeInfo?.employment?.visaType === "F1(OPT)" &&
-              daysRemaining < 90 && (
-                <Alert
-                  message="Visa Expiration Warning"
-                  description={`Your OPT will expire in ${daysRemaining} days. Please check the Visa Status page for next steps or contact HR.`}
-                  type="warning"
-                  showIcon
-                  action={
-                    <Button
-                      size="small"
-                      type="primary"
-                      onClick={() => handleMenuClick("visa-status")}
-                    >
-                      View Visa Status
-                    </Button>
-                  }
-                  style={{ marginBottom: 16 }}
-                />
-              )}
-          </div>
-
-          {/* Detail Cards */}
-          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-            <Col xs={24} lg={12}>
-              <Card
-                title={
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <ClockCircleOutlined style={{ marginRight: 8 }} />
-                    <span>Pending Tasks</span>
-                  </div>
-                }
-                bordered={false}
-              >
-                <List
-                  dataSource={emptyTasks}
-                  renderItem={(item) => (
-                    <List.Item
-                      actions={[
-                        <Button
-                          type="link"
-                          onClick={() => {
-                            if (item.id === 1) handleMenuClick("visa-status");
-                            if (item.id === 2) handleMenuClick("personal-info");
-                          }}
-                        >
-                          {item.completed ? "View" : "Complete"}
-                        </Button>,
-                      ]}
-                    >
-                      <List.Item.Meta
-                        avatar={
-                          <Badge
-                            status={item.completed ? "success" : "processing"}
-                          />
-                        }
-                        title={item.title}
-                        description={
-                          <>
-                            <div>{item.description}</div>
-                            <div
-                              style={{
-                                fontSize: "12px",
-                                color:
-                                  new Date(item.dueDate) < new Date()
-                                    ? "#f5222d"
-                                    : "#8c8c8c",
-                              }}
-                            >
-                              Due: {moment(item.dueDate).format("MM/DD/YYYY")}
-                            </div>
-                          </>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                  locale={{ emptyText: "No pending tasks" }}
-                />
-              </Card>
-            </Col>
-
-            <Col xs={24} lg={12}>
-              <Card
-                title={
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <BellOutlined style={{ marginRight: 8 }} />
-                    <span>Recent Notifications</span>
-                  </div>
-                }
-                bordered={false}
-                extra={<Button type="link">View All</Button>}
-              >
-                <List
-                  dataSource={emptyNotifications}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        avatar={
-                          <Badge dot={!item.read} offset={[0, 0]}>
-                            <Avatar
-                              icon={<BellOutlined />}
-                              style={{
-                                backgroundColor: !item.read
-                                  ? "#1890ff"
-                                  : "#d9d9d9",
-                              }}
-                            />
-                          </Badge>
-                        }
-                        title={item.title}
-                        description={
-                          <>
-                            <div>{item.description}</div>
-                            <div
-                              style={{
-                                fontSize: "12px",
-                                color: "#8c8c8c",
-                              }}
-                            >
-                              {moment(item.date).format("MM/DD/YYYY")}
-                            </div>
-                          </>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                  locale={{ emptyText: "No notifications" }}
-                />
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Quick Links Card */}
-          <Card
-            title={
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <FileOutlined style={{ marginRight: 8 }} />
-                <span>Quick Actions</span>
-              </div>
-            }
-            style={{ marginTop: 16 }}
-            bordered={false}
-          >
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={8}>
-                <Button
-                  type="primary"
-                  icon={<FileTextOutlined />}
-                  size="large"
-                  block
-                  onClick={() => handleMenuClick("onboarding")}
-                >
-                  Onboarding Application
-                </Button>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Button
-                  type="default"
-                  icon={<IdcardOutlined />}
-                  size="large"
-                  block
-                  onClick={() => handleMenuClick("personal-info")}
-                >
-                  Personal Information
-                </Button>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Button
-                  type="default"
-                  icon={<GlobalOutlined />}
-                  size="large"
-                  block
-                  onClick={() => handleMenuClick("visa-status")}
-                  disabled={!employeeInfo?.employment?.visaType}
-                >
-                  Visa Status Management
-                </Button>
-              </Col>
-            </Row>
-          </Card>
-
-          {/* Profile Summary Card */}
-          <Card
-            title={
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <UserOutlined style={{ marginRight: 8 }} />
-                <span>Profile Summary</span>
-              </div>
-            }
-            style={{ marginTop: 16 }}
-            bordered={false}
-          >
-            <Row gutter={[24, 16]} align="middle">
-              <Col xs={24} md={4} style={{ textAlign: "center" }}>
-                <Avatar
-                  size={100}
-                  icon={<UserOutlined />}
-                  src={employeeInfo?.personalInfo?.profilePicture}
-                />
-              </Col>
-              <Col xs={24} md={20}>
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} sm={8}>
-                    <div>
-                      <Text type="secondary">Full Name</Text>
-                      <div>
-                        <Text strong>
-                          {employeeInfo?.personalInfo?.firstName ||
-                            user?.firstName ||
-                            "User"}{" "}
-                          {employeeInfo?.personalInfo?.lastName ||
-                            user?.lastName ||
-                            ""}
-                        </Text>
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <div>
-                      <Text type="secondary">Email</Text>
-                      <div>
-                        <Text strong>
-                          {employeeInfo?.personalInfo?.email ||
-                            user?.email ||
-                            ""}
-                        </Text>
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <div>
-                      <Text type="secondary">Phone</Text>
-                      <div>
-                        <Text strong>
-                          {employeeInfo?.contactInfo?.cellPhone ||
-                            "Not provided"}
-                        </Text>
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <div>
-                      <Text type="secondary">Position</Text>
-                      <div>
-                        <Text strong>
-                          {employeeInfo?.employment?.title || "Employee"}
-                        </Text>
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <div>
-                      <Text type="secondary">Work Authorization</Text>
-                      <div>
-                        <Text strong>
-                          {employeeInfo?.employment?.visaType ||
-                            "Not applicable"}
-                        </Text>
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} sm={8}>
-                    <div>
-                      <Text type="secondary">Status</Text>
-                      <div>
-                        {getStatusBadge(onboardingStatus || "Not Started")}
-                      </div>
-                    </div>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
-          </Card>
-        </Content>
-      </Layout>
     </Layout>
   );
 };

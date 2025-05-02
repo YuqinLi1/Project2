@@ -87,7 +87,7 @@ export const login = (username, password) => async (dispatch) => {
     // after the Redux state is updated
     return { success: true, role: data.user?.role };
   } catch (err) {
-    const message = err.response?.data?.message || "Invalid credentials";
+    const message = err.response?.data?.message || "username doesn't match password, please try again";
     dispatch({ type: LOGIN_FAIL, payload: message });
     dispatch(setAlert(message, "error"));
     return { success: false, message };
