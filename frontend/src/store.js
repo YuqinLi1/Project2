@@ -1,11 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
-import applicationReducer from './slices/applicationSlice';
+import onBoardingReducer from './slices/onBoardingSlice';
 import informationReducer from './slices/informationSlice';
 
 
 const store = configureStore({
   reducer: {
-    application: applicationReducer,
+    onBoarding: onBoardingReducer,
     information: informationReducer,
   }
 });

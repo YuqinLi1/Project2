@@ -30,56 +30,23 @@ const getDocumentsByEmployeeId = asyncHandler(async (req, res) => {
   });
 });
 
-// Upload multiple documents
-const uploadMultipleDocuments = asyncHandler(async (req, res) => {
-  const { employeeId } = req.body;
-
-  if (!employeeId) {
-    return res.status(400).json({ success: false, message: "EmployeeId is required" });
+// Upload single document
+const uploadSingleDocument = asyncHandler(async (req, res) => {
+  if (!req.file || !req.body.employeeId) {
+    return res.status(400).json({ success: false, message: "Missing file or employee ID" });
   }
 
-  if (!req.filesInfo || req.filesInfo.length === 0) {
-    return res.status(400).json({ success: false, message: "No files uploaded" });
-  }
+  const { originalname, mimetype, buffer } = req.file;
 
-  const types = req.body.types; // types sent as array
-  if (!types || types.length !== req.filesInfo.length) {
-    return res.status(400).json({ success: false, message: "Mismatch between files and types" });
-  }
-
-  const requiredTypes = ["Profile Picture", "Driver's License", "Work Authorization"];
-  const uploadedTypes = new Set(types);
-
-  // Check if required documents are uploaded
-  const missingTypes = requiredTypes.filter(t => !uploadedTypes.has(t));
-  if (missingTypes.length > 0) {
-    return res.status(400).json({ success: false, message: "Missing documents: " + missingTypes.join(", ") });
-  }
-
-  const documents = [];
-
-  for (let i = 0; i < req.filesInfo.length; i++) {
-    const fileInfo = req.filesInfo[i];
-    const type = types[i];
-
-    const document = await documentService.createDocument({
-      employeeId,
-      type,
-      fileName: fileInfo.fileName,
-      fileUrl: fileInfo.fileUrl,
-      fileSize: fileInfo.fileSize,
-      mimeType: fileInfo.mimeType,
-      status: "pending",
-    });
-
-    documents.push(document);
-  }
-
-  res.status(201).json({
-    success: true,
-    message: "Documents uploaded successfully",
-    data: documents,
+  const newDoc = new Document({
+    employeeId: req.body.employeeId,
+    filename: originalname,
+    filetype: mimetype,
+    data: buffer,
   });
+
+  const savedDoc = await newDoc.save();
+  res.status(200).json({ success: true, data: savedDoc });
 });
 
 // Preview document
@@ -131,7 +98,7 @@ const deleteDocument = asyncHandler(async (req, res) => {
 
 module.exports = {
   getDocument,
-  uploadMultipleDocuments,
+  uploadSingleDocument,
   downloadDocument,
   previewDocument,
   deleteDocument,

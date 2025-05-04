@@ -12,8 +12,8 @@ import {
   updateEditField,
   setMode,
   discardEdit,
-} from '../slices/informationSlice.js';
-import * as infoActions from '../slices/informationSlice';
+} from '../slices/personalProfileSlice.js';
+import * as infoActions from '../slices/personalProfileSlice.js';
 console.log("setInfo ref:", infoActions.setInfo);
 
 const getValue = (obj, path) => {
@@ -280,4 +280,4 @@ const Information = () => {
   );
 };
 
-export default Information;
+export default PersonalProfile;

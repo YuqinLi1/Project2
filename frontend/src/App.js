@@ -1,19 +1,20 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Registration from "./pages/Auth/Registration";
 import Login from "./pages/Auth/Login";
-import Application from "./pages/Application"
-import Information from "./pages/Information";
+import Onboarding from "./pages/Onboarding"
+import PersonalProfile from "./pages/PersonalProfile";
 import Management from "./pages/Management";
+import Dashboard from "./pages/Dashboard";  // ✅ Added import
 
 function App() {
   return (
       <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />  {/* ✅ Added route */}
         <Route path="/login" element={<Login />} />
         <Route path = "/registration" element={<Registration />} />
-        <Route path="/application" element={<Application />} />
-        <Route path = "/information" element={<Information />} />
+        <Route path="/application" element={<Onboarding />} />
+        <Route path="/information" element={<PersonalProfile />} />
         <Route path="/management" element={<Management />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
   );
 }

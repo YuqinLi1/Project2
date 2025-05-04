@@ -25,28 +25,8 @@ const getDocumentsByEmployeeId = async (employeeId) => {
   return await Document.find({ employeeId });
 };
 
-const getEmployeeDocuments = async (employeeId, type = null) => {
-  const query = { employeeId };
 
-  if (type) {
-    query.type = type;
-  }
 
-  return await Document.find(query).sort({ createdAt: -1 });
-};
-
-const updateDocument = async (documentId, updateData) => {
-  const document = await Document.findByIdAndUpdate(documentId, updateData, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!document) {
-    throw new Error("Document not found");
-  }
-
-  return document;
-};
 
 const reviewVisaDocument = async (documentId, status, feedback, reviewerId) => {
   const document = await Document.findById(documentId);
@@ -143,8 +123,6 @@ const getDocumentFilePath = async (documentId) => {
 module.exports = {
   createDocument,
   getDocumentById,
-  getEmployeeDocuments,
-  updateDocument,
   reviewVisaDocument,
   deleteDocument,
   getDocumentFilePath,

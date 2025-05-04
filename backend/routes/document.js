@@ -1,25 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/auth");
-const {uploadMultipleFiles } = require("../middleware/fileUpload");
-
 const {
-  uploadMultipleDocuments,
+  uploadSingleDocument,
   previewDocument,
   downloadDocument,
   deleteDocument,
   getDocumentsByEmployeeId,
 } = require("../controllers/documentController");
 
-// Public access to preview/download
-router.get("/:id/preview", previewDocument);
-router.get("/:id/download", downloadDocument);
+const { protect } = require("../middleware/authMiddleware");
+const { uploadSingleFile } = require("../middleware/fileUpload");
 
-// Protect all routes below this
-router.use(protect);
+// Upload a single document
+router.post("/upload-single", uploadSingleFile("documents"), uploadSingleDocument);
 
-router.post("/uploadMultiple", uploadMultipleFiles("documents"), uploadMultipleDocuments);
-router.get("/employee/:employeeId", getDocumentsByEmployeeId);
-router.delete("/:id/delete", deleteDocument);
+// Get all documents for a specific employee
+router.get("/employee/:employeeId", protect, getDocumentsByEmployeeId);
+
+// Preview a document (open in browser)
+router.get("/preview/:id", protect, previewDocument);
+
+// Download a document
+router.get("/download/:id", protect, downloadDocument);
+
+// Delete a document
+router.delete("/:id", protect, deleteDocument);
 
 module.exports = router;

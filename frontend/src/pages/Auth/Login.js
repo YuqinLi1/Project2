@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Menu } from 'semantic-ui-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import LoginBox from './LoginBox';
+import LoginBox from '../../component/LoginBox';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const Login = () => {
       });
       if (response.status === 200) {
         localStorage.setItem('token', response.data.token); 
-        navigate('/application');
+        navigate("/dashboard")
       } else {
         setError('Error, please check username and password');
       }
