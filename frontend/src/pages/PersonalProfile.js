@@ -20,7 +20,7 @@ const getValue = (obj, path) => {
   return path.split('.').reduce((acc, part) => acc && acc[part], obj);
 };
 
-const Information = () => {
+const PersonalProfile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 

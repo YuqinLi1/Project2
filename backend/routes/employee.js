@@ -12,8 +12,10 @@ const {
   validatePhoneNumber
 } = require("../middleware/validation");
 const { check } = require("express-validator");
+
 const {
-  checkEmployeeStatusByEmail,
+  getOnboardingStatus,
+  getEmployeeProfileWithDocuments, // ✅ Add import
   createEmployeeProfile,
   getEmployeeProfile,
   getMyProfile,
@@ -27,7 +29,35 @@ router.use(protect);
 // Get current employee profile
 router.get("/me", getMyProfile);
 
-// Submit onboarding application
+// Get onboarding status
+router.get("/status/:userId", getOnboardingStatus);
+
+// ✅ Get employee profile + documents by userId
+router.get("/profile/:userId", getEmployeeProfileWithDocuments);
+
+// Create employee profile
+router.post(
+  "/",
+  [
+    sanitizeBody,
+    check("firstName", "First name is required").not().isEmpty(),
+    check("lastName", "Last name is required").not().isEmpty(),
+    validateRequest,
+  ],
+  createEmployeeProfile
+);
+
+// Get employee profile by employee ID
+router.get("/:id", checkOwnership, getEmployeeProfile);
+
+// Update employee profile
+router.put(
+  "/:id",
+  [sanitizeBody, checkOwnership, checkOnboardingStatus, validateRequest],
+  updateEmployeeProfile
+);
+
+// Submit onboarding application (currently unused by frontend)
 router.post(
   "/onboarding",
   [
@@ -50,29 +80,5 @@ router.post(
   ],
   submitOnboardingApplication
 );
-
-// Get employee profile by ID
-router.get("/:id", checkOwnership, getEmployeeProfile);
-
-// Update employee profile
-router.put(
-  "/:id",
-  [sanitizeBody, checkOwnership, checkOnboardingStatus, validateRequest],
-  updateEmployeeProfile
-);
-
-// Create employee profile
-router.post(
-  "/",
-  [
-    sanitizeBody,
-    check("firstName", "First name is required").not().isEmpty(),
-    check("lastName", "Last name is required").not().isEmpty(),
-    validateRequest,
-  ],
-  createEmployeeProfile
-);
-
-router.post("/check-status", protect, checkEmployeeStatusByEmail);
 
 module.exports = router;

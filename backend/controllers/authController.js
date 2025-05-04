@@ -5,7 +5,6 @@ const User = require("../models/User");
 
 const register = asyncHandler(async (req, res) => {
   const { username, email, password} = req.body;
-  console.log("check 1");
 
   // Validate input
   if (!username || !email || !password) {

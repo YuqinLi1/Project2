@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Menu } from 'semantic-ui-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import LoginBox from './LoginBox';
+import LoginBox from '../../component/LoginBox';
 
 const Registration = () => {
   const navigate = useNavigate();

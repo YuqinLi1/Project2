@@ -8,20 +8,17 @@ const {
   getDocumentsByEmployeeId,
 } = require("../controllers/documentController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect } = require("../middleware/auth");
 const { uploadSingleFile } = require("../middleware/fileUpload");
 
 // Upload a single document
-router.post("/upload-single", uploadSingleFile("documents"), uploadSingleDocument);
+router.post("/upload-single", uploadSingleFile("file"), uploadSingleDocument);
 
 // Get all documents for a specific employee
 router.get("/employee/:employeeId", protect, getDocumentsByEmployeeId);
 
-// Preview a document (open in browser)
-router.get("/preview/:id", protect, previewDocument);
-
-// Download a document
-router.get("/download/:id", protect, downloadDocument);
+router.get("/preview", previewDocument);
+router.get("/download", downloadDocument);
 
 // Delete a document
 router.delete("/:id", protect, deleteDocument);

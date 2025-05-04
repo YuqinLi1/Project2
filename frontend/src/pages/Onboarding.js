@@ -14,6 +14,7 @@ import {
   updateFormField,
 } from '../slices/onBoardingSlice.js';
 import Navigator from '../component/Navigator.js'; 
+import DocumentUpload from '../component/DocumentUpload.js';
 
 const genderOptions = [
   { key: 'm', text: 'Male', value: 'male' },
@@ -82,14 +83,16 @@ const visaOptions = [
   { key: 'other', text: 'Other', value: 'Other' },
 ];
 
-const onboarding = () => {
+const Onboarding = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [unauthorized, setUnauthorized] = useState(false);
-  const [alert, setAlert] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
   const [email, setEmail] = useState("");
   const [readOnly, setReadOnly] = useState(false);
-  const formData = useSelector((state) => state.application.formData);
+  const formData = useSelector((state) => state.onboarding.formData);
+  const status = useSelector((state) => state.onboarding.status);
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -98,11 +101,12 @@ const onboarding = () => {
       return;
     }
 
-    const decoded = jwtDecode(token);
+    const decoded = jwtDecode(token); 
+    const userId = decoded.id;
     const emailFromToken = decoded.email || decoded.username || "";
     setEmail(emailFromToken);
 
-    axios.get("http://localhost:5000/api/employee/status", {
+    axios.get(`http://localhost:5000/api/employee/status/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     .then((res) => {
@@ -112,11 +116,11 @@ const onboarding = () => {
         dispatch(setFormData({ email: emailFromToken }));
         setReadOnly(false);
       } else if (status === "pending") {
-        setAlert("Your application is being reviewed.");
+        setAlertMessage("Your application is being reviewed.");
         setReadOnly(true);
         fetchProfile(token);
       } else if (status === "rejected") {
-        setAlert("Your application was rejected. Please review and resubmit.");
+        setAlertMessage("Your application was rejected. Please review and resubmit.");
         setReadOnly(false);
         fetchProfile(token);
       }
@@ -126,16 +130,126 @@ const onboarding = () => {
     });
   }, [dispatch]);
 
-  const fetchProfile = async (token) => {
+  const fetchProfile = async (token, userId) => {
     try {
-      const res = await axios.get("http://localhost:5000/api/employee/profile", {
+      const res = await axios.get(`http://localhost:5000/api/employee/profile/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      dispatch(setFormData(res.data));
+      dispatch(setFormData(res.data.data)); // ✅ adjust if response shape includes .data
     } catch (err) {
       console.error("Failed to load profile", err);
     }
   };
+
+  const handleSubmit = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const payload = {
+        userId,
+        email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName,
+        preferedName: formData.preferedName,
+        ssn: formData.ssn,
+        dateOfBirth: formData.dob,
+        gender: formData.gender,
+        currentAddress: {
+          street: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+        },
+        contactInfo: {
+          cellPhone: formData.phone,
+        },
+        isPermanentResident: formData.isPermanentResident,
+        greenCardStatus: formData.greenCardStatus,
+        visaType: formData.visaType,
+        otherVisaTitle: formData.otherVisaTitle,
+        visaStartDate: formData.visaStartDate,
+        visaEndDate: formData.visaEndDate,
+        reference: {
+          firstName: formData.referenceFirstName,
+          middleName: formData.referenceMiddleName,
+          lastName: formData.referenceLastName,
+          phone: formData.referencePhone,
+          email: formData.referenceEmail,
+          relationship: formData.referenceRelationship,
+        },
+        emergencyContact: {
+          firstName: formData.emergencyFirstName,
+          middleName: formData.emergencyMiddleName,
+          lastName: formData.emergencyLastName,
+          phone: formData.emergencyPhone,
+          email: formData.emergencyEmail,
+          relationship: formData.emergencyRelationship,
+        },
+      };
+  
+      const res = await axios.post("http://localhost:5000/api/employee", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      const employeeId = res.data.employeeId;
+      const docTypes = [
+        { field: 'Profile', type: "Profile Picture" },
+        { field: 'license', type: "Driver's License" },
+        { field: 'authorization', type: "Work Authorization" },
+      ];
+      
+      if (formData.visaType === 'F1(CPT/OPT)') {
+        docTypes.unshift({ field: 'OPTReceipt', type: "OPT Receipt" });
+      }
+  
+      for (const { field, type } of docTypes) {
+        const file = document.getElementById(`file-${field}`)?.files[0];
+        if (file) {
+          const form = new FormData();
+          form.append("file", file);
+          form.append("employeeId", employeeId);
+          form.append("documentType", type); // send correct label here
+          await axios.post("http://localhost:5000/api/documents/upload-single", form, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data'
+            },
+          });
+        }
+      }
+  
+      window.alert("Submission successful and waiting for review");
+      navigate("/dashboard");
+    } catch (err){
+      console.error("Submission error", err);
+      window.alert("Submission failed. Rolling back...");
+    
+      try {
+        await axios.delete(`http://localhost:5000/api/employee/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch {}
+    
+      try {
+        await axios.delete(`http://localhost:5000/api/documents/employee/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch {}
+    
+      // Reset form fields in Redux
+      dispatch(setFormData({}));
+    
+      // Clear file inputs manually
+      const docTypes = ['Profile', 'license', 'authorization', 'OPTReceipt'];
+      for (const type of docTypes) {
+        const input = document.getElementById(`file-${type}`);
+        if (input) input.value = '';
+      }
+    
+      // ✅ Force refresh the page to re-trigger useEffect and clear local state
+      window.location.reload();
+    }
+    };
 
   if (unauthorized) {
     return <Message negative content="401 Unauthorized: Please login first." />;
@@ -145,7 +259,7 @@ const onboarding = () => {
     <Container>
       <Navigator />
       <Header as="h2" textAlign="center">Onboarding Application</Header>
-      {alert && <Message warning>{alert}</Message>}
+      {alertMessage && <Message warning>{alertMessage}</Message>}
       <Segment>
         <Form>
           <Form.Input label="Email" value={email} readOnly />
@@ -336,7 +450,15 @@ const onboarding = () => {
                 { key: 'no', text: 'No', value: 'no' }
               ]}
               value={formData.isPermanentResident || ""}
-              onChange={(e, { value }) => dispatch(updateFormField({ field: "isPermanentResident", value }))}
+              onChange={(e, { value }) => {
+                dispatch(updateFormField({ field: "isPermanentResident", value }));
+                if (value === "yes") {
+                  dispatch(updateFormField({ field: "visaStartDate", value: "" }));
+                  dispatch(updateFormField({ field: "visaEndDate", value: "" }));
+                  dispatch(updateFormField({ field: "visaType", value: "" }));
+                  dispatch(updateFormField({ field: "otherVisaTitle", value: "" }));
+                }
+              }}
               disabled={readOnly}
             />
           </Form.Field>
@@ -383,27 +505,31 @@ const onboarding = () => {
             </>
           )}
 
-          <Form.Input
-            label="Start Date"
-            type="date"
-            value={formData.visaStartDate || ""}
-            onChange={(e) => dispatch(updateFormField({ field: "visaStartDate", value: e.target.value }))}
-            readOnly={readOnly}
-          />
-
-          <Form.Input
-            label="End Date"
-            type="date"
-            value={formData.visaEndDate || ""}
-            onChange={(e) => dispatch(updateFormField({ field: "visaEndDate", value: e.target.value }))}
-            readOnly={readOnly}
-          />
+          {formData.isPermanentResident !== 'yes' && (
+            <>
+              <Form.Input
+                label="Start Date"
+                type="date"
+                value={formData.visaStartDate || ""}
+                onChange={(e) => dispatch(updateFormField({ field: "visaStartDate", value: e.target.value }))}
+                readOnly={readOnly}
+              />
+              <Form.Input
+                label="End Date"
+                type="date"
+                value={formData.visaEndDate || ""}
+                onChange={(e) => dispatch(updateFormField({ field: "visaEndDate", value: e.target.value }))}
+                readOnly={readOnly}
+              />
+            </>
+          )}
 
           <Header as="h4">Document Upload</Header>
+          
 
           {formData.visaType === 'F1(CPT/OPT)' && (
             <DocumentUpload
-              employeeId={formData.email}
+              employeeId={userId}
               documentTitle="OPT Receipt"
               documentType="OPTReceipt"
               mode={status}
@@ -411,30 +537,32 @@ const onboarding = () => {
           )}
 
           <DocumentUpload
-            employeeId={formData.email}
+            employeeId={userId}
             documentTitle="Profile Picture"
             documentType="Profile"
             mode={status}
           />
 
           <DocumentUpload
-            employeeId={formData.email}
+            employeeId={userId}
             documentTitle="Driver’s License"
             documentType="license"
             mode={status}
           />
 
           <DocumentUpload
-            employeeId={formData.email}
+            employeeId={userId}
             documentTitle="Work Authorization"
             documentType="authorization"
             mode={status}
           />
-          <Button primary disabled={readOnly}>Submit</Button>
+          {(status === 'never submit' || status === 'rejected') && (
+            <Button primary onClick={handleSubmit}>Submit</Button>
+          )}
         </Form>
       </Segment>
     </Container>
   );
 };
 
-export default onboarding;
+export default Onboarding;

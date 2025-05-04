@@ -1,34 +1,42 @@
 const { asyncHandler } = require("../utils/errorHandler");
 const employeeService = require("../services/employeeService");
-const Employee = require("../models/Employee");  // ✅ ADD THIS
-const Document = require("../models/Document")
+const Employee = require("../models/Employee");
+const Document = require("../models/Document");
+const User = require("../models/User"); // ✅ Missing import added
 
-//employeeController
+// @desc Get onboarding status by userId
+// @route GET /api/employee/status/:userId
+// @access Private
+const getOnboardingStatus = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+  const user = await User.findById(userId);
 
-const checkEmployeeStatusByEmail = asyncHandler(async (req, res) => {
-  const email = req.user.email; // ✅ Already verified and attached by protect middleware
-
-  if (!email) {
-    return res.status(400).json({ success: false, message: "Email not found in user" });
+  if (!user) {
+    return res.status(200).json({ status: "never submit" });
   }
-  console.log("check 10" +email);
-  const employee = await Employee.findOne({ email });
 
-  console.log("check 11 " +employee);
+  const employee = await Employee.findOne({ userId });
 
-  console.log("check 22 " + employee.onboardingStatus);
+  if (!employee || !employee.onboardingStatus) {
+    return res.status(200).json({ status: "never submit" });
+  }
 
+  return res.status(200).json({ status: employee.onboardingStatus });
+});
+
+// ✅ NEW CONTROLLER
+// @desc Get employee profile with documents
+// @route GET /api/employee/profile/:userId
+// @access Private
+const getEmployeeProfileWithDocuments = asyncHandler(async (req, res) => {
+  const userId = req.params.userId;
+
+  const employee = await Employee.findOne({ userId });
   if (!employee) {
-    return res.status(200).json({
-      success: true,
-      status: "never submitted",
-      data: null,
-      documents: [],
-    });
+    return res.status(404).json({ success: false, message: "Employee not found" });
   }
 
   const documents = await Document.find({ employeeId: employee._id }).select("type fileName _id");
-  console.log("check 13 " + documents);
 
   return res.status(200).json({
     success: true,
@@ -39,36 +47,25 @@ const checkEmployeeStatusByEmail = asyncHandler(async (req, res) => {
 });
 
 const createEmployeeProfile = asyncHandler(async (req, res) => {
-  // Create employee profile
+  console.log("check 1 ", req.body);
   const employee = await employeeService.createEmployee(req.body, req.user.id);
-  console.log("check 1 "+employee);
-
   res.status(201).json({
     success: true,
     message: "Employee profile created successfully",
-    employeeId: employee._id,  // <-- important for frontend
+    employeeId: employee._id,
   });
 });
 
 const getEmployeeProfile = asyncHandler(async (req, res) => {
-  // Get employee profile
   const employee = await employeeService.getEmployeeById(req.params.id);
-
   res.status(200).json({
     success: true,
     data: employee,
   });
 });
 
-/**
- * @desc    Get current employee profile
- * @route   GET /api/employee/me
- * @access  Private (Employee)
- */
 const getMyProfile = asyncHandler(async (req, res) => {
-  // Get employee profile
   const employee = await employeeService.getEmployeeByUserId(req.user.id);
-
   res.status(200).json({
     success: true,
     data: employee,
@@ -76,12 +73,7 @@ const getMyProfile = asyncHandler(async (req, res) => {
 });
 
 const updateEmployeeProfile = asyncHandler(async (req, res) => {
-  // Update employee profile
-  const employee = await employeeService.updateEmployee(
-    req.params.id,
-    req.body
-  );
-
+  const employee = await employeeService.updateEmployee(req.params.id, req.body);
   res.status(200).json({
     success: true,
     message: "Employee profile updated successfully",
@@ -90,15 +82,11 @@ const updateEmployeeProfile = asyncHandler(async (req, res) => {
 });
 
 const submitOnboardingApplication = asyncHandler(async (req, res) => {
-  // Get employee
   const employee = await employeeService.getEmployeeByUserId(req.user.id);
-
-  // Submit onboarding application
   const application = await employeeService.submitOnboardingApplication(
     employee._id,
     req.body
   );
-
   res.status(200).json({
     success: true,
     message: "Onboarding application submitted successfully",
@@ -107,7 +95,8 @@ const submitOnboardingApplication = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  checkEmployeeStatusByEmail,
+  getOnboardingStatus,
+  getEmployeeProfileWithDocuments, // ✅ Exported new method
   createEmployeeProfile,
   getEmployeeProfile,
   getMyProfile,

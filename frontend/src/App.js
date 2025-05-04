@@ -15,6 +15,7 @@ function App() {
         <Route path="/application" element={<Onboarding />} />
         <Route path="/information" element={<PersonalProfile />} />
         <Route path="/management" element={<Management />} />
+        <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
   );
 }

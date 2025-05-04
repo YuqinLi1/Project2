@@ -1,20 +1,16 @@
 const { asyncHandler } = require("../utils/errorHandler");
 const documentService = require("../services/documentService");
+const Document = require("../models/Document"); // <-- FIXED: Added import
 const fs = require("fs");
 const path = require("path");
 
-//DocumentController
-
+// Get a single document
 const getDocument = asyncHandler(async (req, res) => {
-  // Get document
   const document = await documentService.getDocumentById(req.params.id);
-
-  res.status(200).json({
-    success: true,
-    data: document,
-  });
+  res.status(200).json({ success: true, data: document });
 });
 
+// Get all documents for a specific employee
 const getDocumentsByEmployeeId = asyncHandler(async (req, res) => {
   const employeeId = req.params.employeeId;
 
@@ -23,77 +19,58 @@ const getDocumentsByEmployeeId = asyncHandler(async (req, res) => {
   }
 
   const documents = await documentService.getDocumentsByEmployeeId(employeeId);
-
-  res.status(200).json({
-    success: true,
-    data: documents,
-  });
+  res.status(200).json({ success: true, data: documents });
 });
 
-// Upload single document
+// Upload a single document
 const uploadSingleDocument = asyncHandler(async (req, res) => {
-  if (!req.file || !req.body.employeeId) {
-    return res.status(400).json({ success: false, message: "Missing file or employee ID" });
+  console.log("check 11", req.body, req.file); 
+  const { employeeId, documentType } = req.body;
+
+  if (!employeeId || !documentType || !req.file) {
+    return res.status(400).json({ success: false, message: "Missing required fields or file" });
   }
 
-  const { originalname, mimetype, buffer } = req.file;
+  try {
+    const savedDoc = await documentService.saveUploadedDocument({
+      employeeId,
+      type: documentType,
+      file: req.file,
+    });
 
-  const newDoc = new Document({
-    employeeId: req.body.employeeId,
-    filename: originalname,
-    filetype: mimetype,
-    data: buffer,
-  });
-
-  const savedDoc = await newDoc.save();
-  res.status(200).json({ success: true, data: savedDoc });
+    res.status(200).json({ success: true, data: savedDoc });
+  } catch (error) {
+    console.error("Error uploading document:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
-// Preview document
-const previewDocument = asyncHandler(async (req, res) => {
-  // Get document
-  const document = await documentService.getDocumentById(req.params.id);
+// Preview a document
+const previewDocument = async (req, res) => {
+  const { employeeId, type } = req.query;
+  try {
+    await documentService.streamPreviewDocument(employeeId, type, res);
+  } catch (error) {
+    console.error("Error in previewDocument:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
-  // Get file path
-  const filePath = await documentService.getDocumentFilePath(document._id);
+// Download a document
+const downloadDocument = async (req, res) => {
+  const { employeeId, type } = req.query;
+  try {
+    await documentService.streamDownloadDocument(employeeId, type, res);
+  } catch (error) {
+    console.error("Error in downloadDocument:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
-  // Set header for inline viewing
-  res.setHeader("Content-Disposition", `inline; filename=${document.fileName}`);
-  res.setHeader("Content-Type", document.mimeType);
-
-  // Stream file
-  const fileStream = fs.createReadStream(filePath);
-  fileStream.pipe(res);
-});
-
-const downloadDocument = asyncHandler(async (req, res) => {
-  // Get document
-  const document = await documentService.getDocumentById(req.params.id);
-
-  // Get file path
-  const filePath = await documentService.getDocumentFilePath(document._id);
-
-  // Set headers
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename=${document.fileName}`
-  );
-  res.setHeader("Content-Type", document.mimeType);
-
-  // Stream file
-  const fileStream = fs.createReadStream(filePath);
-  fileStream.pipe(res);
-});
-
-
+// Delete a document
 const deleteDocument = asyncHandler(async (req, res) => {
-  // Delete document
   await documentService.deleteDocument(req.params.id);
-
-  res.status(200).json({
-    success: true,
-    message: "Document deleted successfully",
-  });
+  res.status(200).json({ success: true, message: "Document deleted successfully" });
 });
 
 module.exports = {

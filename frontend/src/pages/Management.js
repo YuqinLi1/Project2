@@ -5,7 +5,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { setVisaState, setVisaMessage } from '../slices/visaSlice';
-import Navigator from './Navigator';
+import Navigator from '../component/Navigator';
 
 const Management = () => {
   const dispatch = useDispatch();
