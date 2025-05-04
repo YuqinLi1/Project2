@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Form, Row, Col } from "antd";
 import { useForm, Controller } from "react-hook-form";
 import Button from "../common/Button";
@@ -9,15 +9,24 @@ const ContactForm = ({
   onSubmit,
   loading,
   buttonText = "Save Contact",
+  onChange,
 }) => {
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: initialValues,
   });
 
+  useEffect(() => {
+    const subscription = watch((values) => {
+      onChange && onChange(values);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, onChange]);
+  
   return (
     <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
       <Row gutter={16}>

@@ -1,4 +1,4 @@
-import React, { createContext, useReducer } from "react";
+import React, { createContext, useReducer, useCallback, useMemo } from "react";
 import api from "../api";
 import { useUi } from "./UiContext";
 
@@ -21,6 +21,7 @@ const employeeReducer = (state, action) => {
       return {
         ...state,
         loading: true,
+        error: null,
       };
     case "FETCH_PROFILE_SUCCESS":
       return {
@@ -63,6 +64,11 @@ const employeeReducer = (state, action) => {
         loading: false,
         error: action.payload,
       };
+    case "CLEAR_ERROR":
+      return {
+        ...state,
+        error: null,
+      };
     default:
       return state;
   }
@@ -70,11 +76,12 @@ const employeeReducer = (state, action) => {
 
 // Provider component
 export const EmployeeProvider = ({ children }) => {
+  // Use useReducer with a stable dispatch
   const [state, dispatch] = useReducer(employeeReducer, initialState);
   const { setAlert } = useUi();
 
-  // Get profile
-  const getProfile = async () => {
+  // Memoize API call functions to prevent unnecessary re-creation
+  const getProfile = useCallback(async () => {
     dispatch({ type: "SET_LOADING" });
     try {
       const res = await api.get("/employee/me");
@@ -84,71 +91,69 @@ export const EmployeeProvider = ({ children }) => {
       });
       return res.data.data;
     } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to fetch profile";
       dispatch({
         type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to fetch profile",
+        payload: errorMessage,
       });
-      setAlert(
-        err.response?.data?.message || "Failed to fetch profile",
-        "error"
-      );
+      setAlert(errorMessage, "error");
       return null;
     }
-  };
+  }, [setAlert]);
 
-  // Update profile
-  const updateProfile = async (profileData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.put(`/employee/${profileData._id}`, profileData);
-      dispatch({
-        type: "UPDATE_PROFILE_SUCCESS",
-        payload: res.data.data,
-      });
-      setAlert("Profile updated successfully", "success");
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to update profile",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to update profile",
-        "error"
-      );
-      return null;
-    }
-  };
+  const updateProfile = useCallback(
+    async (profileData) => {
+      dispatch({ type: "SET_LOADING" });
+      try {
+        const res = await api.put(`/employee/${profileData._id}`, profileData);
+        dispatch({
+          type: "UPDATE_PROFILE_SUCCESS",
+          payload: res.data.data,
+        });
+        setAlert("Profile updated successfully", "success");
+        return res.data.data;
+      } catch (err) {
+        const errorMessage =
+          err.response?.data?.message || "Failed to update profile";
+        dispatch({
+          type: "API_ERROR",
+          payload: errorMessage,
+        });
+        setAlert(errorMessage, "error");
+        return null;
+      }
+    },
+    [setAlert]
+  );
 
-  // Submit onboarding
-  const submitOnboarding = async (formData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.post("/employee/onboarding", formData);
-      dispatch({
-        type: "FETCH_PROFILE_SUCCESS",
-        payload: res.data.data,
-      });
-      setAlert("Onboarding application submitted successfully", "success");
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload:
+  const submitOnboarding = useCallback(
+    async (formData) => {
+      dispatch({ type: "SET_LOADING" });
+      try {
+        const res = await api.post("/employee/onboarding", formData);
+        dispatch({
+          type: "FETCH_PROFILE_SUCCESS",
+          payload: res.data.data,
+        });
+        setAlert("Onboarding application submitted successfully", "success");
+        return res.data.data;
+      } catch (err) {
+        const errorMessage =
           err.response?.data?.message ||
-          "Failed to submit onboarding application",
-      });
-      setAlert(
-        err.response?.data?.message ||
-          "Failed to submit onboarding application",
-        "error"
-      );
-      return null;
-    }
-  };
+          "Failed to submit onboarding application";
+        dispatch({
+          type: "API_ERROR",
+          payload: errorMessage,
+        });
+        setAlert(errorMessage, "error");
+        return null;
+      }
+    },
+    [setAlert]
+  );
 
-  // Get documents
-  const getDocuments = async () => {
+  const getDocuments = useCallback(async () => {
     dispatch({ type: "SET_LOADING" });
     try {
       const res = await api.get("/employee/documents");
@@ -158,48 +163,47 @@ export const EmployeeProvider = ({ children }) => {
       });
       return res.data.data;
     } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to fetch documents";
       dispatch({
         type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to fetch documents",
+        payload: errorMessage,
       });
-      setAlert(
-        err.response?.data?.message || "Failed to fetch documents",
-        "error"
-      );
+      setAlert(errorMessage, "error");
       return null;
     }
-  };
+  }, [setAlert]);
 
-  // Upload document
-  const uploadDocument = async (formData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.post("/employee/documents", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      dispatch({
-        type: "UPLOAD_DOCUMENT_SUCCESS",
-        payload: res.data.data,
-      });
-      setAlert("Document uploaded successfully", "success");
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to upload document",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to upload document",
-        "error"
-      );
-      return null;
-    }
-  };
+  const uploadDocument = useCallback(
+    async (formData) => {
+      dispatch({ type: "SET_LOADING" });
+      try {
+        const res = await api.post("/employee/documents", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        dispatch({
+          type: "UPLOAD_DOCUMENT_SUCCESS",
+          payload: res.data.data,
+        });
+        setAlert("Document uploaded successfully", "success");
+        return res.data.data;
+      } catch (err) {
+        const errorMessage =
+          err.response?.data?.message || "Failed to upload document";
+        dispatch({
+          type: "API_ERROR",
+          payload: errorMessage,
+        });
+        setAlert(errorMessage, "error");
+        return null;
+      }
+    },
+    [setAlert]
+  );
 
-  // Get visa status
-  const getVisaStatus = async () => {
+  const getVisaStatus = useCallback(async () => {
     dispatch({ type: "SET_LOADING" });
     try {
       const res = await api.get("/visa-status/me");
@@ -209,70 +213,95 @@ export const EmployeeProvider = ({ children }) => {
       });
       return res.data.data;
     } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to fetch visa status";
       dispatch({
         type: "API_ERROR",
-        payload: err.response?.data?.message || "Failed to fetch visa status",
+        payload: errorMessage,
       });
-      setAlert(
-        err.response?.data?.message || "Failed to fetch visa status",
-        "error"
-      );
+      setAlert(errorMessage, "error");
       return null;
     }
-  };
+  }, [setAlert]);
 
-  // Upload visa document
-  const uploadVisaDocument = async (documentType, formData) => {
-    dispatch({ type: "SET_LOADING" });
-    try {
-      const res = await api.post(
-        "/visa-status/document",
-        {
-          ...formData,
-          documentType,
-        },
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
+  const uploadVisaDocument = useCallback(
+    async (documentType, formData) => {
+      dispatch({ type: "SET_LOADING" });
+      try {
+        const res = await api.post(
+          "/visa-status/document",
+          {
+            ...formData,
+            documentType,
           },
-        }
-      );
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
 
-      setAlert("Visa document uploaded successfully", "success");
-      // Refresh visa status after upload
-      await getVisaStatus();
-      return res.data.data;
-    } catch (err) {
-      dispatch({
-        type: "API_ERROR",
-        payload:
-          err.response?.data?.message || "Failed to upload visa document",
-      });
-      setAlert(
-        err.response?.data?.message || "Failed to upload visa document",
-        "error"
-      );
-      return null;
-    }
-  };
+        setAlert("Visa document uploaded successfully", "success");
+        // Refresh visa status after upload
+        await getVisaStatus();
+        return res.data.data;
+      } catch (err) {
+        const errorMessage =
+          err.response?.data?.message || "Failed to upload visa document";
+        dispatch({
+          type: "API_ERROR",
+          payload: errorMessage,
+        });
+        setAlert(errorMessage, "error");
+        return null;
+      }
+    },
+    [setAlert, getVisaStatus]
+  );
+
+  // Additional utility methods
+  const clearError = useCallback(() => {
+    dispatch({ type: "CLEAR_ERROR" });
+  }, []);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      profile: state.profile,
+      documents: state.documents,
+      visaStatus: state.visaStatus,
+      loading: state.loading,
+      error: state.error,
+
+      // Memoized methods
+      getProfile,
+      updateProfile,
+      submitOnboarding,
+      getDocuments,
+      uploadDocument,
+      getVisaStatus,
+      uploadVisaDocument,
+      clearError,
+    }),
+    [
+      state.profile,
+      state.documents,
+      state.visaStatus,
+      state.loading,
+      state.error,
+      getProfile,
+      updateProfile,
+      submitOnboarding,
+      getDocuments,
+      uploadDocument,
+      getVisaStatus,
+      uploadVisaDocument,
+      clearError,
+    ]
+  );
 
   return (
-    <EmployeeContext.Provider
-      value={{
-        profile: state.profile,
-        documents: state.documents,
-        visaStatus: state.visaStatus,
-        loading: state.loading,
-        error: state.error,
-        getProfile,
-        updateProfile,
-        submitOnboarding,
-        getDocuments,
-        uploadDocument,
-        getVisaStatus,
-        uploadVisaDocument,
-      }}
-    >
+    <EmployeeContext.Provider value={contextValue}>
       {children}
     </EmployeeContext.Provider>
   );

@@ -1,43 +1,27 @@
 import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { Spin } from "antd";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
-console.log("PrivateRoute state", {
-  loading,
-  isAuthenticated,
-  user,
-  expectedRole: role
-});
-
 const PrivateRoute = ({ children, role }) => {
-  const { isAuthenticated, user, loading } = useAuth();
-  const location = useLocation();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
-        <Spin size="large" />
-      </div>
-    );
+  // Show nothing while loading
+  if (isLoading) {
+    return null; // Or return a loading spinner
   }
 
+  // Not authenticated, redirect to login
   if (!isAuthenticated) {
-    // Redirect to login if not authenticated
-    console.log("Not authenticated, redirecting...");
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (role && user.role !== role) {
-    // Redirect based on role
-    return <Navigate to={user.role === "hr" ? "/hr" : "/employee"} replace />;
+  // Check role if specified
+  if (role && user?.role !== role) {
+    // Redirect to appropriate dashboard based on role
+    const dashboardRoute =
+      user.role === "hr" ? "/hr/dashboard" : "/employee/dashboard";
+
+    return <Navigate to={dashboardRoute} replace />;
   }
 
   return children;

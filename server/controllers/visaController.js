@@ -54,11 +54,6 @@ const uploadVisaDocument = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Review visa document
- * @route   PUT /api/visa-status/document/:id
- * @access  Private (HR)
- */
 const reviewVisaDocument = asyncHandler(async (req, res) => {
   const { status, feedback } = req.body;
 
@@ -99,11 +94,6 @@ const reviewVisaDocument = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Get employees with visa status in progress
- * @route   GET /api/visa-status/in-progress
- * @access  Private (HR)
- */
 const getEmployeesWithVisaInProgress = asyncHandler(async (req, res) => {
   // Get employees
   const employees = await visaService.getEmployeesWithOPTVisaStatus();

@@ -16,6 +16,10 @@ const {
   reviewOnboardingApplication,
 } = require("../controllers/hrController");
 
+const {
+  getEmployeesWithVisaInProgress,
+} = require("../controllers/visaController");
+
 // All routes require HR authentication
 router.use(protect);
 router.use(authorize("hr"));
@@ -54,5 +58,7 @@ router.put(
   ],
   reviewOnboardingApplication
 );
+
+router.get("/visa-management", getEmployeesWithVisaInProgress);
 
 module.exports = router;

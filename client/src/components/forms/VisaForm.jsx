@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Form,
   Row,
@@ -18,7 +18,7 @@ import Input from "../common/Input";
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const VisaForm = ({ initialValues = {}, onSubmit, loading }) => {
+const VisaForm = ({ initialValues = {}, onSubmit, loading, onChange }) => {
   const [isPermanentResident, setIsPermanentResident] = useState(
     initialValues.isPermanentResident !== undefined
       ? initialValues.isPermanentResident
@@ -29,21 +29,25 @@ const VisaForm = ({ initialValues = {}, onSubmit, loading }) => {
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
       ...initialValues,
-      startDate: initialValues.startDate
-        ? moment(initialValues.startDate)
-        : null,
+      startDate: initialValues.startDate ? moment(initialValues.startDate) : null,
       endDate: initialValues.endDate ? moment(initialValues.endDate) : null,
     },
   });
 
+  useEffect(() => {
+    const subscription = watch((values) => {
+      onChange && onChange(values);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, onChange]);
+
   const normFile = (e) => {
-    if (Array.isArray(e)) {
-      return e;
-    }
+    if (Array.isArray(e)) return e;
     return e && e.fileList;
   };
 

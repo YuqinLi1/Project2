@@ -1,110 +1,257 @@
-import React, { useState, useEffect } from "react";
-import { Layout, Typography, Breadcrumb, Spin } from "antd";
-import { HomeOutlined, UserOutlined } from "@ant-design/icons";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import { useHr } from "../../contexts/HrContext";
-import EmployeeList from "../../components/hr/EmployeeList";
-import EmployeeDetail from "../../components/hr/EmployeeDetail";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Layout,
+  Typography,
+  Card,
+  Row,
+  Col,
+  Descriptions,
+  Button,
+  Spin,
+  Alert,
+  Divider,
+  Tag,
+} from "antd";
+import {
+  UserOutlined,
+  EditOutlined,
+  FileOutlined,
+  GlobalOutlined,
+  ContactsOutlined,
+  HomeOutlined,
+  PhoneOutlined,
+} from "@ant-design/icons";
+
 import MainLayout from "../../components/common/MainLayout";
+import { useHr } from "../../contexts/HrContext";
 
-const { Title } = Typography;
 const { Content } = Layout;
+const { Title, Text } = Typography;
 
-const EmployeeProfiles = () => {
-  const {
-    getAllEmployees,
-    searchEmployees,
-    getEmployeeDetails,
-    employees,
-    selectedEmployee,
-    loading,
-  } = useHr();
+const EmployeeProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [downloadLoading, setDownloadLoading] = useState(false);
+  const { getEmployeeById, selectedEmployee, loading, error } = useHr();
 
   useEffect(() => {
-    getAllEmployees();
-  }, []);
+    // Fetch employee details when component mounts
+    getEmployeeById(id);
+  }, [id, getEmployeeById]);
 
-  useEffect(() => {
-    if (id) {
-      getEmployeeDetails(id);
-    }
-  }, [id]);
+  // If loading or no employee found
+  if (loading) {
+    return (
+      <MainLayout>
+        <Content
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+          }}
+        >
+          <Spin size="large" tip="Loading Employee Profile..." />
+        </Content>
+      </MainLayout>
+    );
+  }
 
-  const handleSearch = (searchTerm) => {
-    if (searchTerm.trim() === "") {
-      getAllEmployees();
-    } else {
-      searchEmployees(searchTerm);
-    }
-  };
+  // Handle error case
+  if (error || !selectedEmployee) {
+    return (
+      <MainLayout>
+        <Content style={{ padding: "24px" }}>
+          <Alert
+            message="Employee Not Found"
+            description="Unable to retrieve employee details."
+            type="error"
+          />
+        </Content>
+      </MainLayout>
+    );
+  }
 
-  const handleDownloadDocument = async (documentId) => {
-    try {
-      setDownloadLoading(true);
-      window.open(`/api/documents/${documentId}/download`, "_blank");
-    } catch (error) {
-      console.error("Download error:", error);
-    } finally {
-      setDownloadLoading(false);
-    }
-  };
-
-  const handlePreviewDocument = (documentId) => {
-    // This is handled by the iframe in the modal
-  };
+  // Destructure employee information
+  const {
+    personalInfo = {},
+    contactInfo = {},
+    address = {},
+    employment = {},
+    emergencyContacts = [],
+    onboardingStatus,
+  } = selectedEmployee;
 
   return (
     <MainLayout>
       <Content style={{ padding: "24px" }}>
-        <Breadcrumb style={{ marginBottom: "16px" }}>
-          <Breadcrumb.Item>
-            <Link to="/hr">
-              <HomeOutlined /> Home
-            </Link>
-          </Breadcrumb.Item>
-          <Breadcrumb.Item>
-            <UserOutlined /> Employees
-          </Breadcrumb.Item>
-          {id && (
-            <Breadcrumb.Item>
-              {selectedEmployee
-                ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
-                : "Loading..."}
-            </Breadcrumb.Item>
-          )}
-        </Breadcrumb>
+        <Row gutter={[16, 16]}>
+          {/* Profile Header */}
+          <Col xs={24}>
+            <Card>
+              <Row align="middle" gutter={16}>
+                <Col>
+                  <UserOutlined
+                    style={{ fontSize: "48px", color: "#1890ff" }}
+                  />
+                </Col>
+                <Col>
+                  <Title level={3} style={{ margin: 0 }}>
+                    {personalInfo.firstName} {personalInfo.lastName}
+                  </Title>
+                  <Text type="secondary">
+                    {employment.visaType || "No Visa Type"}
+                  </Text>
+                </Col>
+                <Col flex="auto" style={{ textAlign: "right" }}>
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={() => navigate(`/hr/employees/${id}/edit`)}
+                  >
+                    Edit Profile
+                  </Button>
+                </Col>
+              </Row>
+            </Card>
+          </Col>
 
-        {id ? (
-          <>
-            <Title level={2}>Employee Profile</Title>
-            {loading ? (
-              <div style={{ textAlign: "center", padding: "50px" }}>
-                <Spin size="large" />
-              </div>
-            ) : (
-              <EmployeeDetail
-                employee={selectedEmployee}
-                onDownloadDocument={handleDownloadDocument}
-                onPreviewDocument={handlePreviewDocument}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            <Title level={2}>Employee Profiles</Title>
-            <EmployeeList
-              employees={employees}
-              loading={loading}
-              onSearch={handleSearch}
-            />
-          </>
-        )}
+          {/* Personal Information */}
+          <Col xs={24} md={12}>
+            <Card
+              title={
+                <>
+                  <UserOutlined /> Personal Information
+                </>
+              }
+            >
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="Full Name">
+                  {personalInfo.firstName} {personalInfo.middleName || ""}{" "}
+                  {personalInfo.lastName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Preferred Name">
+                  {personalInfo.preferredName || "Not specified"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {personalInfo.email || "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="SSN">
+                  {personalInfo.ssn
+                    ? "XXX-XX-" + personalInfo.ssn.slice(-4)
+                    : "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Date of Birth">
+                  {personalInfo.dateOfBirth || "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Gender">
+                  {personalInfo.gender || "Not specified"}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </Col>
+
+          {/* Contact Information */}
+          <Col xs={24} md={12}>
+            <Card
+              title={
+                <>
+                  <ContactsOutlined /> Contact Information
+                </>
+              }
+            >
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="Cell Phone">
+                  {contactInfo.cellPhone || "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Work Phone">
+                  {contactInfo.workPhone || "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Address">
+                  {address.building} {address.street},{address.city},{" "}
+                  {address.state} {address.zipcode}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </Col>
+
+          {/* Employment Information */}
+          <Col xs={24} md={12}>
+            <Card
+              title={
+                <>
+                  <GlobalOutlined /> Employment Details
+                </>
+              }
+            >
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="Visa Type">
+                  {employment.visaType || "Not specified"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Start Date">
+                  {employment.startDate || "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="End Date">
+                  {employment.endDate || "Not provided"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Onboarding Status">
+                  <Tag
+                    color={
+                      onboardingStatus === "approved"
+                        ? "green"
+                        : onboardingStatus === "pending"
+                        ? "orange"
+                        : "red"
+                    }
+                  >
+                    {onboardingStatus || "Not Started"}
+                  </Tag>
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </Col>
+
+          {/* Emergency Contacts */}
+          <Col xs={24} md={12}>
+            <Card
+              title={
+                <>
+                  <ContactsOutlined /> Emergency Contacts
+                </>
+              }
+            >
+              {emergencyContacts.length > 0 ? (
+                emergencyContacts.map((contact, index) => (
+                  <Descriptions
+                    key={index}
+                    column={1}
+                    size="small"
+                    title={`Contact ${index + 1}`}
+                  >
+                    <Descriptions.Item label="Name">
+                      {contact.firstName} {contact.lastName}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Relationship">
+                      {contact.relationship}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Phone">
+                      {contact.phone}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Email">
+                      {contact.email}
+                    </Descriptions.Item>
+                    {index < emergencyContacts.length - 1 && <Divider />}
+                  </Descriptions>
+                ))
+              ) : (
+                <Text type="secondary">No emergency contacts added</Text>
+              )}
+            </Card>
+          </Col>
+        </Row>
       </Content>
     </MainLayout>
   );
 };
 
-export default EmployeeProfiles;
+export default EmployeeProfile;

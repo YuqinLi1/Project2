@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Form, Row, Col, Card, Divider, DatePicker, Select } from "antd";
 import { useForm, Controller } from "react-hook-form";
 import moment from "moment";
@@ -7,10 +7,11 @@ import Input from "../common/Input";
 
 const { Option } = Select;
 
-const PersonalInfoForm = ({ initialValues = {}, onSubmit, loading }) => {
+const PersonalInfoForm = ({ initialValues = {}, onSubmit, loading, onChange, email }) => {
   const {
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -18,8 +19,16 @@ const PersonalInfoForm = ({ initialValues = {}, onSubmit, loading }) => {
       dateOfBirth: initialValues.dateOfBirth
         ? moment(initialValues.dateOfBirth)
         : null,
+      email: email || initialValues.email || ""
     },
   });
+
+  useEffect(() => {
+    const subscription = watch((values) => {
+      onChange && onChange({ ...values, email });
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, email, onChange]);
 
   return (
     <Card title="Personal Information">

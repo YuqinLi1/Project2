@@ -115,6 +115,25 @@ const reviewOnboardingApplication = asyncHandler(async (req, res) => {
   });
 });
 
+// Example implementation (adjust based on your data model)
+exports.getVisaManagementData = async (req, res) => {
+  try {
+    // Fetch visa management data
+    // This could involve querying multiple collections/models
+    const visaData = await VisaDocument.find({})
+      .populate("employeeId", "personalInfo employment") // Populate employee details
+      .lean(); // Convert to plain JavaScript object
+
+    res.json(visaData);
+  } catch (error) {
+    console.error("Visa Management Fetch Error:", error);
+    res.status(500).json({
+      message: "Error fetching visa management data",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllEmployees,
   searchEmployees,
