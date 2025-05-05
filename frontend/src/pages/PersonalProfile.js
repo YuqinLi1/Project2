@@ -164,8 +164,8 @@ const PersonalProfile = () => {
         <Form.Field>
           <label>{label}</label>
           <Header as="h5">Uploaded: {doc.fileName}</Header>
-          <Button size="small" onClick={() => window.open(`http://localhost:5000/api/documents/${doc._id}/preview`, '_blank')}>Preview</Button>
-          <Button size="small" onClick={() => window.open(`http://localhost:5000/api/documents/${doc._id}/download`, '_blank')}>Download</Button>
+          <Button size="small" onClick={() => window.open(`http://localhost:5000/api/documents/preview?employeeId=${doc.employeeId}&type=${encodeURIComponent(doc.type)}`, '_blank')}>Preview</Button>
+          <Button size="small" onClick={() => window.open(`http://localhost:5000/api/documents/download?employeeId=${doc.employeeId}&type=${encodeURIComponent(doc.type)}`, '_blank')}>Download</Button>
         </Form.Field>
       );
     }
