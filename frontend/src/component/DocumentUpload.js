@@ -10,11 +10,11 @@ const DocumentUpload = ({ employeeId, documentTitle, documentType, mode }) => {
   };
 
   const handlePreview = () => {
-    window.open(`http://localhost:5000/api/documents/preview?employeeId=${employeeId}&type=${documentType}`, "_blank");
+    window.open(`http://localhost:5000/api/documents/preview?employeeId=${employeeId}&type=${encodeURIComponent(documentType)}`, "_blank");
   };
 
   const handleDownload = () => {
-    window.open(`http://localhost:5000/api/documents/download?employeeId=${employeeId}&type=${documentType}`, "_blank");
+    window.open(`http://localhost:5000/api/documents/download?employeeId=${employeeId}&type=${encodeURIComponent(documentType)}`, "_blank");
   };
 
   return (

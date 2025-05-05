@@ -2,12 +2,10 @@ const { asyncHandler } = require("../utils/errorHandler");
 const employeeService = require("../services/employeeService");
 const tokenService = require("../services/tokenService");
 const emailService = require("../services/emailService");
+const Application = require("../models/Application");
+const Token = require("../models/Token");
+const Employee = require("../models/Employee");
 
-/**
- * @desc    Get all employees
- * @route   GET /api/hr/employees
- * @access  Private (HR)
- */
 const getAllEmployees = asyncHandler(async (req, res) => {
   // Get all employees
   const employees = await employeeService.getAllEmployees();
@@ -77,18 +75,113 @@ const getRegistrationTokens = asyncHandler(async (req, res) => {
 });
 
 const getPendingOnboardingApplications = asyncHandler(async (req, res) => {
-  // Get applications
-  const applications = await Application.find({ status: "pending" })
-    .populate("employeeId", "firstName lastName email")
-    .sort({ createdAt: 1 });
+  try {
+    console.log("Fetching pending applications");
 
-  res.status(200).json({
-    success: true,
-    count: applications.length,
-    data: applications,
-  });
+    // First, check for any applications at all
+    const totalApps = await Application.countDocuments({});
+    console.log(`Total applications in database: ${totalApps}`);
+
+    // Then check for applications with status pending
+    const pendingCount = await Application.countDocuments({
+      status: "pending",
+    });
+    console.log(`Applications with pending status: ${pendingCount}`);
+
+    // List all unique status values in applications
+    const uniqueStatuses = await Application.distinct("status");
+    console.log("Unique application statuses:", uniqueStatuses);
+
+    // Get applications with pending status
+    const applications = await Application.find({ status: "pending" })
+      .populate("employeeId", "firstName lastName email")
+      .sort({ createdAt: 1 });
+
+    console.log(
+      "Pending applications with populated data:",
+      applications.map((app) => ({
+        id: app._id,
+        status: app.status,
+        employeeId: app.employeeId?._id || "Not populated",
+        name: app.employeeId
+          ? `${app.employeeId.firstName} ${app.employeeId.lastName}`
+          : "Unknown",
+      }))
+    );
+
+    res.status(200).json({
+      success: true,
+      count: applications.length,
+      data: applications,
+    });
+  } catch (error) {
+    console.error("Error fetching pending applications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching pending applications",
+      error: error.message,
+    });
+  }
 });
 
+const syncApplicationsWithEmployees = asyncHandler(async (req, res) => {
+  try {
+    console.log("Starting application sync with employees");
+
+    // Find all employees with pending status
+    const pendingEmployees = await Employee.find({
+      onboardingStatus: "pending",
+    });
+    console.log(
+      `Found ${pendingEmployees.length} employees with pending status`
+    );
+
+    const created = [];
+
+    // Create applications for each employee
+    for (const employee of pendingEmployees) {
+      // Check if application already exists
+      const existingApp = await Application.findOne({
+        employeeId: employee._id,
+      });
+
+      if (existingApp) {
+        console.log(`Application already exists for employee ${employee._id}`);
+        // Update status if needed
+        if (existingApp.status !== "pending") {
+          existingApp.status = "pending";
+          await existingApp.save();
+        }
+      } else {
+        // Create new application
+        const newApp = await Application.create({
+          employeeId: employee._id,
+          status: "pending",
+        });
+
+        created.push({
+          applicationId: newApp._id,
+          employeeId: employee._id,
+          name: `${employee.firstName} ${employee.lastName}`,
+          email: employee.email,
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Created ${created.length} new applications`,
+      created,
+    });
+  } catch (error) {
+    console.error("Error syncing applications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error syncing applications with employees",
+      error: error.message,
+    });
+  }
+});
 const reviewOnboardingApplication = asyncHandler(async (req, res) => {
   const { status, feedback } = req.body;
 
@@ -115,6 +208,50 @@ const reviewOnboardingApplication = asyncHandler(async (req, res) => {
   });
 });
 
+const getRejectedOnboardingApplications = asyncHandler(async (req, res) => {
+  try {
+    // Get applications
+    const applications = await Application.find({ status: "rejected" })
+      .populate("employeeId", "firstName lastName email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: applications.length,
+      data: applications,
+    });
+  } catch (error) {
+    console.error("Error fetching rejected applications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching rejected applications",
+      error: error.message,
+    });
+  }
+});
+
+const getApprovedOnboardingApplications = asyncHandler(async (req, res) => {
+  try {
+    // Get applications
+    const applications = await Application.find({ status: "approved" })
+      .populate("employeeId", "firstName lastName email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: applications.length,
+      data: applications,
+    });
+  } catch (error) {
+    console.error("Error fetching approved applications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching approved applications",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = {
   getAllEmployees,
   searchEmployees,
@@ -122,4 +259,7 @@ module.exports = {
   getRegistrationTokens,
   getPendingOnboardingApplications,
   reviewOnboardingApplication,
+  getRejectedOnboardingApplications,
+  getApprovedOnboardingApplications,
+  syncApplicationsWithEmployees,
 };

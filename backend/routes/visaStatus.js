@@ -12,6 +12,7 @@ const {
   reviewVisaDocument,
   getEmployeesWithVisaInProgress,
   sendVisaDocumentNotification,
+  getAllVisaStatuses,
 } = require("../controllers/visaController");
 
 // All routes require authentication
@@ -33,6 +34,8 @@ router.post(
 
 // HR Only routes
 router.use("/in-progress", authorize("hr"), getEmployeesWithVisaInProgress);
+
+router.get("/all", authorize("hr"), getAllVisaStatuses);
 
 // Review visa document
 router.put(

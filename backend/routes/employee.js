@@ -15,7 +15,7 @@ const { check } = require("express-validator");
 
 const {
   getOnboardingStatus,
-  getEmployeeProfileWithDocuments, // ✅ Add import
+  getEmployeeProfileWithDocuments,
   createEmployeeProfile,
   getEmployeeProfile,
   getMyProfile,

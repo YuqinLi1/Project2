@@ -96,7 +96,7 @@ const submitOnboardingApplication = asyncHandler(async (req, res) => {
 
 module.exports = {
   getOnboardingStatus,
-  getEmployeeProfileWithDocuments, // ✅ Exported new method
+  getEmployeeProfileWithDocuments,
   createEmployeeProfile,
   getEmployeeProfile,
   getMyProfile,

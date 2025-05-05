@@ -13,6 +13,9 @@ const {
   generateRegistrationToken,
   getRegistrationTokens,
   getPendingOnboardingApplications,
+  getRejectedOnboardingApplications,
+  getApprovedOnboardingApplications,
+  syncApplicationsWithEmployees,
   reviewOnboardingApplication,
 } = require("../controllers/hrController");
 
@@ -41,8 +44,15 @@ router.post(
 // Get registration tokens history
 router.get("/registration-tokens", getRegistrationTokens);
 
+router.post("/sync-applications", syncApplicationsWithEmployees);
 // Get pending onboarding applications
 router.get("/onboarding/pending", getPendingOnboardingApplications);
+
+// Get rejected onboarding applications
+router.get("/onboarding/rejected", getRejectedOnboardingApplications);
+
+// Get approved onboarding applications
+router.get("/onboarding/approved", getApprovedOnboardingApplications);
 
 // Review onboarding application
 router.put(

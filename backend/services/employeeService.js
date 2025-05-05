@@ -18,7 +18,7 @@ const createEmployee = async (employeeData, userId) => {
     ...employeeData,
     onboardingStatus: "pending",
     userId,
-  })
+  });
 
   return employee;
 };

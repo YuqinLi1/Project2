@@ -22,8 +22,10 @@ const Login = () => {
         password
       });
       if (response.status === 200) {
-        localStorage.setItem('token', response.data.token); 
-        navigate("/dashboard")
+        const decoded = JSON.parse(atob(response.data.token.split('.')[1]));
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('userRole', decoded.role); // ✅ Store role
+        navigate("/dashboard");
       } else {
         setError('Error, please check username and password');
       }

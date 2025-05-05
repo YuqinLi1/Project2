@@ -258,7 +258,9 @@ const Onboarding = () => {
   return (
     <Container>
       <Navigator />
-      <Header as="h2" textAlign="center">Onboarding Application</Header>
+      <Header as="h2" textAlign="center">
+        Onboarding Application
+      </Header>
       {alertMessage && <Message warning>{alertMessage}</Message>}
       <Segment>
         <Form>

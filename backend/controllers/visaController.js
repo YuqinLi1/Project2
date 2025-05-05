@@ -2,6 +2,7 @@ const { asyncHandler } = require("../utils/errorHandler");
 const visaService = require("../services/visaService");
 const employeeService = require("../services/employeeService");
 const emailService = require("../services/emailService");
+const VisaStatus = require("../models/VisaStatus");
 
 const getVisaStatus = asyncHandler(async (req, res) => {
   // Get visa status
@@ -54,11 +55,6 @@ const uploadVisaDocument = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Review visa document
- * @route   PUT /api/visa-status/document/:id
- * @access  Private (HR)
- */
 const reviewVisaDocument = asyncHandler(async (req, res) => {
   const { status, feedback } = req.body;
 
@@ -99,11 +95,7 @@ const reviewVisaDocument = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Get employees with visa status in progress
- * @route   GET /api/visa-status/in-progress
- * @access  Private (HR)
- */
+
 const getEmployeesWithVisaInProgress = asyncHandler(async (req, res) => {
   // Get employees
   const employees = await visaService.getEmployeesWithOPTVisaStatus();
@@ -135,6 +127,20 @@ const sendVisaDocumentNotification = asyncHandler(async (req, res) => {
   });
 });
 
+
+const getAllVisaStatuses = asyncHandler(async (req, res) => {
+  // Get all visa statuses
+  const visaStatuses = await VisaStatus.find()
+    .populate("employeeId")
+    .sort({ "employeeId.lastName": 1, "employeeId.firstName": 1 });
+
+  res.status(200).json({
+    success: true,
+    count: visaStatuses.length,
+    data: visaStatuses,
+  });
+});
+
 module.exports = {
   getVisaStatus,
   getMyVisaStatus,
@@ -142,4 +148,5 @@ module.exports = {
   reviewVisaDocument,
   getEmployeesWithVisaInProgress,
   sendVisaDocumentNotification,
+  getAllVisaStatuses,
 };
