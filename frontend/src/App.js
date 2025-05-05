@@ -12,8 +12,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />  {/* ✅ Added route */}
         <Route path="/login" element={<Login />} />
         <Route path = "/registration" element={<Registration />} />
-        <Route path="/application" element={<Onboarding />} />
-        <Route path="/information" element={<PersonalProfile />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/profile" element={<PersonalProfile />} />
         <Route path="/management" element={<Management />} />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>

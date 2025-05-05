@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Container, Menu, Button, Form, Grid, Header,
-  Segment, Divider, Input, Modal
+  Segment, Divider, Modal, Image
 } from 'semantic-ui-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -13,21 +13,30 @@ import {
   setMode,
   discardEdit,
 } from '../slices/personalProfileSlice.js';
-import * as infoActions from '../slices/personalProfileSlice.js';
-console.log("setInfo ref:", infoActions.setInfo);
+import { jwtDecode } from 'jwt-decode';
 
 const getValue = (obj, path) => {
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  return path.split('.').reduce((acc, part) => {
+    if (acc === undefined || acc === null) return '';
+    if (Array.isArray(acc) && !isNaN(part)) return acc[parseInt(part)];
+    return acc[part];
+  }, obj);
+};
+
+const formatDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD
 };
 
 const PersonalProfile = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const informationState = useSelector((state) => state.information);
+  const informationState = useSelector((state) => state.personalProfile);
   const info = informationState?.info;
   const editInfo = informationState?.editInfo;
-  const mode = informationState?.mode ?? 'initial';
+  const mode = informationState?.mode ?? 'init';
   const isEdit = mode === 'edit';
 
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -38,72 +47,60 @@ const PersonalProfile = () => {
   const [documentMap, setDocumentMap] = useState({});
 
   useEffect(() => {
-    console.log("check redux 0");
-    dispatch(setInfo({ firstName: 'Debug', lastName: 'Tester' }));
-  }, []);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUnauthorized(true);
+      return;
+    }
 
-  useEffect(() => {
-    console.log("🔎 Redux selector: info =", info);
-  }, [info]);
-
-  useEffect(() => {
-    console.log("🧠 Redux info updated:", info);
-  }, [info]);
-
-  useEffect(() => {
-    const fetchInfo = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
+    const decoded = jwtDecode(token);
+    const userId = decoded.id;
+    axios.get(`http://localhost:5000/api/employee/status/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then((res) => {
+      const status = res.data.status;
+      if (status === 'never submit') {
         setUnauthorized(true);
         return;
       }
-  
-      try {
-        const res = await axios.get('http://localhost:5000/api/employee/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-  
-        const employee = res.data.data;
-  
-        if (!employee || !['approved', 'pending', 'never submitted'].includes(employee.onboardingStatus)) {
+
+      const fetchInfo = async () => {
+        try {
+          const res = await axios.get('http://localhost:5000/api/employee/me', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const employee = res.data.data;
+          dispatch(setInfo(JSON.parse(JSON.stringify(employee))));
+
+          const docs = await axios.get(`http://localhost:5000/api/documents/employee/${employee._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          const map = {};
+          docs.data.data.forEach(doc => map[doc.type] = doc);
+          setDocumentMap(map);
+
+        } catch (err) {
+          console.error('Error fetching info:', err);
           setUnauthorized(true);
-          return;
         }
-  
-        // ✅ Wrap this in a setTimeout to ensure Redux update happens outside React's strict mode batch
-        setTimeout(() => {
-          console.log('[✓] Dispatching employee info now...');
-          const safeEmployee = JSON.parse(JSON.stringify(employee));
-          console.log('safeEmployee'+safeEmployee);
-          dispatch(setInfo(safeEmployee));
-        }, 0);
-  
-        // Fetch documents
-        const docs = await axios.get(`http://localhost:5000/api/documents/employee/${employee._id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-  
-        const map = {};
-        docs.data.data.forEach(doc => map[doc.type] = doc);
-        setDocumentMap(map);
-  
-      } catch (err) {
-        console.error('Error fetching info:', err);
-        setUnauthorized(true);
-      }
-    };
-  
-    fetchInfo();
+      };
+
+      fetchInfo();
+    })
+    .catch((err) => {
+      console.error('Status check failed:', err);
+      setUnauthorized(true);
+    });
   }, [dispatch]);
 
   const handleEdit = () => {
-    console.info("check 1 ", info);
     if (info) {
       const cloned = JSON.parse(JSON.stringify(info));
       dispatch(setEditInfo(cloned));
       dispatch(setMode('edit'));
-    } else {
-      console.warn("⚠️ Cannot enter edit mode, info is missing");
     }
   };
 
@@ -118,7 +115,7 @@ const PersonalProfile = () => {
         }
       );
       dispatch(setInfo(res.data.data));
-      dispatch(setMode('initial'));
+      dispatch(setMode('init'));
     } catch (err) {
       console.error('Error saving info:', err);
     }
@@ -133,19 +130,36 @@ const PersonalProfile = () => {
     dispatch(updateEditField({ field, value: e.target.value }));
   };
 
-  const renderField = (label, fieldPath, type = 'text') => (
-    <Form.Input
-      label={label}
-      type={type}
-      value={isEdit ? (getValue(editInfo, fieldPath) || '') : (getValue(info, fieldPath) || '')}
-      onChange={handleChange(fieldPath)}
-      readOnly={!isEdit}
-    />
-  );
+  const renderField = (label, fieldPath, type = 'text') => {
+    let value = isEdit ? getValue(editInfo, fieldPath) : getValue(info, fieldPath);
+    if (type === 'date') value = formatDate(value);
+    return (
+      <Form.Input
+        label={label}
+        type={type}
+        value={value || ''}
+        onChange={handleChange(fieldPath)}
+        readOnly={!isEdit}
+      />
+    );
+  };
+
+  const renderProfilePicture = () => {
+    const doc = documentMap['Profile Picture'];
+    if (doc && doc.fileUrl) {
+      return (
+        <Form.Field>
+          <label>Profile Picture</label>
+          <Image src={`http://localhost:5000/${doc.fileUrl}`} size="small" bordered />
+        </Form.Field>
+      );
+    }
+    return null;
+  };
 
   const renderDocumentField = (type, label, setter) => {
     const doc = documentMap[type];
-    if (!isEdit && doc) {
+    if (!isEdit && type !== 'Profile Picture' && doc) {
       return (
         <Form.Field>
           <label>{label}</label>
@@ -174,10 +188,6 @@ const PersonalProfile = () => {
     );
   }
 
-  if (info === null) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <Container style={{ marginTop: '2em' }}>
       <Menu inverted>
@@ -186,7 +196,7 @@ const PersonalProfile = () => {
 
       <Segment>
         <div style={{ display: 'flex', gap: '1em', justifyContent: 'flex-end' }}>
-          {mode === 'initial' && <Button onClick={handleEdit}>Edit</Button>}
+          {mode === 'init' && <Button onClick={handleEdit}>Edit</Button>}
           {isEdit && (
             <>
               <Button onClick={() => setShowCancelModal(true)}>Cancel</Button>
@@ -206,9 +216,7 @@ const PersonalProfile = () => {
           </Grid.Row>
         </Grid>
 
-        <Form.Field>
-          {renderDocumentField('Profile Picture', 'Profile Picture', setProfilePictureFile)}
-        </Form.Field>
+        {renderProfilePicture()}
 
         <Grid columns={4} stackable>
           <Grid.Row>
@@ -237,7 +245,7 @@ const PersonalProfile = () => {
 
         <Grid columns={3} stackable>
           <Grid.Row>
-            <Grid.Column>{renderField('Visa Title', 'visaTitle')}</Grid.Column>
+            <Grid.Column>{renderField('Visa Type', 'visaType')}</Grid.Column>
             <Grid.Column>{renderField('Start Date', 'startDate', 'date')}</Grid.Column>
             <Grid.Column>{renderField('End Date', 'endDate', 'date')}</Grid.Column>
           </Grid.Row>

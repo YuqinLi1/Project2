@@ -6,8 +6,21 @@ const getDocumentByEmployeeAndType = async (employeeId, type) => {
   return await Document.findOne({ employeeId, type });
 };
 
+const Profile_Types = [
+  "Profile Picture",
+  "Driver's License",
+  "Work Authorization",
+  "OPT Receipt",
+];
+
+const getDocumentsByEmployeeId = async (employeeId) => {
+  return await Document.find({
+    employeeId,
+    type: { $in: Profile_Types },
+  });
+};
+
 const saveUploadedDocument = async ({ employeeId, file, type }) => {
-  console.log("check 12 ", employeeId);
   if (!file) throw new Error("Missing file");
 
   const newDoc = new Document({
@@ -38,6 +51,7 @@ const streamDownloadDocument = async (employeeId, type, res) => {
 };
 
 module.exports = {
+  getDocumentsByEmployeeId,
   saveUploadedDocument,
   getDocumentByEmployeeAndType,
   streamPreviewDocument,

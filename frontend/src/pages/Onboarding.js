@@ -177,14 +177,14 @@ const Onboarding = () => {
           email: formData.referenceEmail,
           relationship: formData.referenceRelationship,
         },
-        emergencyContact: {
+        emergencyContacts: [{
           firstName: formData.emergencyFirstName,
           middleName: formData.emergencyMiddleName,
           lastName: formData.emergencyLastName,
           phone: formData.emergencyPhone,
           email: formData.emergencyEmail,
           relationship: formData.emergencyRelationship,
-        },
+        }]
       };
   
       const res = await axios.post("http://localhost:5000/api/employee", payload, {

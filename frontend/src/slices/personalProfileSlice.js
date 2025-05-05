@@ -6,12 +6,11 @@ const initialState = {
   mode: 'init', // only 'init' or 'edit'
 };
 
-const informationSlice = createSlice({
-  name: 'information',
+const personalProfileSlice = createSlice({
+  name: 'personalProfile',
   initialState,
   reducers: {
     setInfo: (state, action) => {
-      console.log("check 1, reach");
       state.info = action.payload;
     },
     setEditInfo: (state, action) => {
@@ -46,6 +45,6 @@ export const {
   updateEditField,
   setMode,
   discardEdit,
-} = informationSlice.actions;
+} = personalProfileSlice.actions;
 
-export default informationSlice.reducer;
+export default personalProfileSlice.reducer;
