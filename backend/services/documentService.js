@@ -39,8 +39,13 @@ const streamPreviewDocument = async (employeeId, type, res) => {
   const document = await getDocumentByEmployeeAndType(employeeId, type);
   if (!document) throw new Error("Document not found");
 
-  res.set("Content-Type", document.mimeType || "application/octet-stream");
-  fs.createReadStream(path.resolve(document.fileUrl)).pipe(res);
+  const filePath = path.resolve(document.fileUrl);
+  const fileStream = fs.createReadStream(filePath);
+
+  res.setHeader("Content-Type", document.mimeType || "application/octet-stream");
+  res.setHeader("Content-Disposition", `inline; filename="${document.fileName}"`);
+
+  fileStream.pipe(res);
 };
 
 const streamDownloadDocument = async (employeeId, type, res) => {
