@@ -97,39 +97,18 @@ const VisaManagement = () => {
   };
 
   // Handle document preview
-  const handleDocumentPreview = async (employee, documentId) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-
-      const response = await axios.get(
-        `http://localhost:5000/api/documents/${documentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setSelectedDocument(response.data.data);
-        setIsPreviewModalOpen(true);
-      }
-
-      setLoading(false);
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Error fetching document details"
-      );
-      setLoading(false);
-    }
-  };
-
-  // Handle document download
-  const handleDocumentDownload = (documentId) => {
+  const handleDocumentPreview = (employee, document) => {
     const token = localStorage.getItem("token");
     window.open(
-      `/api/documents/${documentId}/download?token=${token}`,
+      `http://localhost:5000/api/visa-status/preview?employeeId=${employee.employeeId._id}&type=${document.type}`,
+      "_blank"
+    );
+  };
+
+  const handleDocumentDownload = (employee, document) => {
+    const token = localStorage.getItem("token");
+    window.open(
+      `http://localhost:5000/api/visa-status/download?employeeId=${employee.employeeId._id}&type=${document.type}`,
       "_blank"
     );
   };
@@ -151,7 +130,7 @@ const VisaManagement = () => {
       const token = localStorage.getItem("token");
 
       const response = await axios.put(
-        `http://localhost:5000/api/visa-status/document/${selectedDocument._id}`,
+        `http://localhost:5000/api/documents/${selectedDocument._id}/status`,
         {
           status: "approved",
         },
@@ -441,8 +420,8 @@ const VisaManagement = () => {
                                     primary
                                     onClick={() =>
                                       handleDocumentPreview(
-                                        employee,
-                                        doc.documentId
+                                        selectedEmployee,
+                                        selectedDocument
                                       )
                                     }
                                   >
@@ -533,8 +512,8 @@ const VisaManagement = () => {
                                 size="mini"
                                 onClick={() =>
                                   handleDocumentPreview(
-                                    employee,
-                                    doc.documentId
+                                    selectedEmployee,
+                                    selectedDocument
                                   )
                                 }
                                 color={
@@ -625,7 +604,9 @@ const VisaManagement = () => {
                 <p>Preview would appear here in a production environment</p>
                 <Button
                   primary
-                  onClick={() => handleDocumentDownload(selectedDocument._id)}
+                  onClick={() =>
+                    handleDocumentDownload(selectedEmployee, selectedDocument)
+                  }
                 >
                   <Icon name="download" /> Download Document
                 </Button>
@@ -663,17 +644,14 @@ const VisaManagement = () => {
                 <Button
                   primary
                   onClick={() =>
-                    handleDocumentPreview(
-                      selectedEmployee,
-                      selectedDocument.documentId
-                    )
+                    handleDocumentPreview(selectedEmployee, selectedDocument)
                   }
                 >
                   <Icon name="eye" /> Preview Document
                 </Button>
                 <Button
                   onClick={() =>
-                    handleDocumentDownload(selectedDocument.documentId)
+                    handleDocumentDownload(selectedEmployee, selectedDocument)
                   }
                 >
                   <Icon name="download" /> Download

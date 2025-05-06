@@ -17,6 +17,8 @@ const {
   getApprovedOnboardingApplications,
   syncApplicationsWithEmployees,
   reviewOnboardingApplication,
+  resendRegistrationEmail,
+  revokeRegistrationToken,
 } = require("../controllers/hrController");
 
 // All routes require HR authentication
@@ -43,6 +45,9 @@ router.post(
 
 // Get registration tokens history
 router.get("/registration-tokens", getRegistrationTokens);
+
+router.post("/resend-token/:id", protect, resendRegistrationEmail);
+router.put("/revoke-token/:id", protect, revokeRegistrationToken);
 
 router.post("/sync-applications", syncApplicationsWithEmployees);
 // Get pending onboarding applications

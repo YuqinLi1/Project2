@@ -73,6 +73,7 @@ const RegistrationTokenTab = () => {
       if (response.data.success) {
         dispatch(
           addRegistrationToken({
+            _id: response.data.data._id,
             email: response.data.data.email,
             name: response.data.data.name,
             token: response.data.data.token,
