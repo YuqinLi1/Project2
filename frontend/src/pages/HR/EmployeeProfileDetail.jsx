@@ -128,7 +128,16 @@ const EmployeeProfileDetail = () => {
             <Grid.Column width={6}>
               <Segment>
                 <Image
-                  src={employee.profilePicture || "/default-profile.png"}
+                  src={
+                    documents.find((doc) => doc.type === "Profile Picture")
+                      ?.fileUrl
+                      ? `http://localhost:5000/${
+                          documents.find(
+                            (doc) => doc.type === "Profile Picture"
+                          )?.fileUrl
+                        }`
+                      : "/default-profile.png"
+                  }
                   size="medium"
                   circular
                   centered
@@ -188,7 +197,10 @@ const EmployeeProfileDetail = () => {
                     <List.Content>
                       <List.Header>Cell Phone</List.Header>
                       <List.Description>
-                        {employee.cellPhone || "N/A"}
+                        {employee.cellPhone ||
+                          (employee.contactInfo &&
+                            employee.contactInfo.cellPhone) ||
+                          "N/A"}
                       </List.Description>
                     </List.Content>
                   </List.Item>
@@ -197,7 +209,10 @@ const EmployeeProfileDetail = () => {
                     <List.Content>
                       <List.Header>Work Phone</List.Header>
                       <List.Description>
-                        {employee.workPhone || "N/A"}
+                        {employee.workPhone ||
+                          (employee.contactInfo &&
+                            employee.contactInfo.workPhone) ||
+                          "N/A"}
                       </List.Description>
                     </List.Content>
                   </List.Item>
@@ -217,7 +232,6 @@ const EmployeeProfileDetail = () => {
               {!employee.address && "Address not provided"}
             </p>
           </Segment>
-
           <Segment>
             <Header as="h3">Work Authorization</Header>
             <List divided relaxed>
@@ -226,36 +240,38 @@ const EmployeeProfileDetail = () => {
                 <List.Content>
                   <List.Header>Type</List.Header>
                   <List.Description>
-                    {employee.workAuthorizationType || "N/A"}
+                    {employee.isPermanentResident
+                      ? employee.residencyType
+                      : employee.visaType || "N/A"}
                   </List.Description>
                 </List.Content>
               </List.Item>
-              <List.Item>
-                <List.Icon name="calendar check" />
-                <List.Content>
-                  <List.Header>Start Date</List.Header>
-                  <List.Description>
-                    {employee.workAuthorization?.startDate
-                      ? new Date(
-                          employee.workAuthorization.startDate
-                        ).toLocaleDateString()
-                      : "N/A"}
-                  </List.Description>
-                </List.Content>
-              </List.Item>
-              <List.Item>
-                <List.Icon name="calendar times" />
-                <List.Content>
-                  <List.Header>End Date</List.Header>
-                  <List.Description>
-                    {employee.workAuthorization?.endDate
-                      ? new Date(
-                          employee.workAuthorization.endDate
-                        ).toLocaleDateString()
-                      : "N/A"}
-                  </List.Description>
-                </List.Content>
-              </List.Item>
+              {!employee.isPermanentResident && (
+                <>
+                  <List.Item>
+                    <List.Icon name="calendar check" />
+                    <List.Content>
+                      <List.Header>Start Date</List.Header>
+                      <List.Description>
+                        {employee.startDate
+                          ? new Date(employee.startDate).toLocaleDateString()
+                          : "N/A"}
+                      </List.Description>
+                    </List.Content>
+                  </List.Item>
+                  <List.Item>
+                    <List.Icon name="calendar times" />
+                    <List.Content>
+                      <List.Header>End Date</List.Header>
+                      <List.Description>
+                        {employee.endDate
+                          ? new Date(employee.endDate).toLocaleDateString()
+                          : "N/A"}
+                      </List.Description>
+                    </List.Content>
+                  </List.Item>
+                </>
+              )}
             </List>
           </Segment>
         </Tab.Pane>

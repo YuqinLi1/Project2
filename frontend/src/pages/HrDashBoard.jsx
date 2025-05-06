@@ -374,40 +374,6 @@ const Dashboard = () => {
         </Message>
       )}
 
-      {/* Statistics Section */}
-      <Segment raised>
-        <Header as="h2">Dashboard Overview</Header>
-        <Statistic.Group widths={userRole === "hr" ? 4 : 2} size="small">
-          {userRole === "hr" && (
-            <>
-              <Statistic>
-                <Statistic.Value>{stats.totalEmployees}</Statistic.Value>
-                <Statistic.Label>Total Employees</Statistic.Label>
-              </Statistic>
-
-              <Statistic color="orange">
-                <Statistic.Value>{stats.pendingApplications}</Statistic.Value>
-                <Statistic.Label>Pending Applications</Statistic.Label>
-              </Statistic>
-            </>
-          )}
-
-          <Statistic color={stats.pendingDocuments > 0 ? "yellow" : "green"}>
-            <Statistic.Value>{stats.pendingDocuments}</Statistic.Value>
-            <Statistic.Label>Pending Documents</Statistic.Label>
-          </Statistic>
-
-          {userRole === "hr" && (
-            <Statistic color={stats.visaExpiringSoon > 0 ? "red" : "green"}>
-              <Statistic.Value>{stats.visaExpiringSoon}</Statistic.Value>
-              <Statistic.Label>Visas Expiring Soon</Statistic.Label>
-            </Statistic>
-          )}
-        </Statistic.Group>
-      </Segment>
-
-      <Divider hidden />
-
       {/* Quick Access Section */}
       <Header as="h2">Quick Access</Header>
       <Grid
