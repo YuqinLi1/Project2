@@ -28,6 +28,7 @@ const Dashboard = () => {
     visaExpiringSoon: 0,
     onboardingStatus: "never submit", // Add this to track employee's onboarding status
   });
+  const [activeTab, setActiveTab] = useState(0);
 
   // Fetch user info and role-specific stats on component mount
   useEffect(() => {

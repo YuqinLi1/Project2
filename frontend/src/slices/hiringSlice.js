@@ -14,7 +14,7 @@ const hiringSlice = createSlice({
   initialState,
   reducers: {
     addRegistrationToken: (state, action) => {
-      state.registrationTokens.push(action.payload);
+      state.registrationTokens = [action.payload, ...state.registrationTokens];
     },
     setRegistrationTokens: (state, action) => {
       state.registrationTokens = action.payload;

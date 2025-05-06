@@ -15,6 +15,7 @@ import {
 } from "semantic-ui-react";
 import axios from "axios";
 import { setFeedbackText } from "../../slices/hiringSlice";
+import RegistrationTokenTab from "../../component/RegistrationToken";
 
 const DocumentManagement = () => {
   const dispatch = useDispatch();
@@ -185,6 +186,14 @@ const DocumentManagement = () => {
 
   // Render document management tabs
   const panes = [
+    {
+      menuItem: "Registration Tokens",
+      render: () => (
+        <Tab.Pane>
+          <RegistrationTokenTab />
+        </Tab.Pane>
+      ),
+    },
     {
       menuItem: "Pending Documents",
       render: () => (
@@ -408,7 +417,7 @@ const DocumentManagement = () => {
 
   return (
     <Container>
-      <Header as="h1">Document Management</Header>
+      <Header as="h1">Hiring Management</Header>
       <Tab panes={panes} />
 
       {/* Rejection Feedback Modal */}
