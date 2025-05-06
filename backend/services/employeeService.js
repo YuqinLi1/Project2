@@ -12,9 +12,17 @@ const createEmployee = async (employeeData, userId) => {
     throw new Error("Employee profile already exists for this user");
   }
 
-  const { userId: _, isPermanentResident, greenCardStatus, otherVisaTitle, visaStartDate, visaEndDate, ...rest } = employeeData;
+  const {
+    userId: _,
+    isPermanentResident,
+    greenCardStatus,
+    otherVisaTitle,
+    visaStartDate,
+    visaEndDate,
+    ...rest
+  } = employeeData;
 
-  try{
+  try {
     const employee = await Employee.create({
       ...rest,
       isPermanentResident: isPermanentResident === "yes",
@@ -27,7 +35,7 @@ const createEmployee = async (employeeData, userId) => {
       userId,
     });
     return employee;
-  }catch (error) {
+  } catch (error) {
     console.log("check 5 ", error.message);
     return undefined;
   }
@@ -119,7 +127,7 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
 
   // Create or update visa status if applicable
   if (!applicationData.isPermanentResident && applicationData.visaType) {
-    try{
+    try {
       let visaStatus = await VisaStatus.findOne({ employeeId });
 
       if (!visaStatus) {
@@ -140,7 +148,7 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
         visaStatus.visaTitle = applicationData.visaTitle;
         visaStatus.startDate = applicationData.startDate;
         visaStatus.endDate = applicationData.endDate;
-  
+
         if (
           applicationData.visaType === "F1(CPT/OPT)" &&
           visaStatus.currentStep === null
@@ -148,7 +156,7 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
           visaStatus.currentStep = "OPT Receipt";
         }
       }
-  
+
       await visaStatus.save();
       return application;
     } catch (error) {
@@ -156,7 +164,6 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
       return undefined;
     }
   }
-   
 };
 
 const reviewOnboardingApplication = async (
@@ -184,6 +191,33 @@ const reviewOnboardingApplication = async (
     employee.onboardingStatus = status;
     employee.onboardingFeedback = feedback || "";
     await employee.save();
+    // If application is approved, also approve all pending documents
+    if (status === "approved") {
+      // Find all pending documents for this employee
+      const pendingDocuments = await Document.find({
+        employeeId: employee._id,
+        status: "pending",
+      });
+
+      // Update each document to approved status
+      for (const doc of pendingDocuments) {
+        doc.status = "approved";
+        doc.reviewedBy = reviewerId;
+        doc.reviewedAt = new Date();
+        await doc.save();
+      }
+
+      // If this employee has a visa status record, update next step if needed
+      if (employee.visaType === "F1(CPT/OPT)") {
+        const visaStatus = await VisaStatus.findOne({
+          employeeId: employee._id,
+        });
+        if (visaStatus && visaStatus.currentStep === "OPT Receipt") {
+          visaStatus.currentStep = "OPT EAD";
+          await visaStatus.save();
+        }
+      }
+    }
   }
 
   return application;

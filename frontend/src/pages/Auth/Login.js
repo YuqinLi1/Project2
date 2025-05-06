@@ -28,11 +28,8 @@ const Login = () => {
         const decoded = JSON.parse(atob(response.data.token.split(".")[1]));
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("userRole", decoded.role);
-        if (decoded.role === "hr") {
-          navigate("/hr-dashboard"); // HR dashboard route
-        } else {
-          navigate("/dashboard"); // Employee dashboard route
-        }
+
+        navigate("/dashboard");
       } else {
         setError("Error, please check username and password");
       }

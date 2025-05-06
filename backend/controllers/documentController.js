@@ -1,6 +1,6 @@
 const { asyncHandler } = require("../utils/errorHandler");
 const documentService = require("../services/documentService");
-const Document = require("../models/Document"); // <-- FIXED: Added import
+const Document = require("../models/Document");
 const fs = require("fs");
 const path = require("path");
 
@@ -15,7 +15,9 @@ const getDocumentsByEmployeeId = asyncHandler(async (req, res) => {
   const employeeId = req.params.employeeId;
 
   if (!employeeId) {
-    return res.status(400).json({ success: false, message: "Employee ID is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Employee ID is required" });
   }
 
   const documents = await documentService.getDocumentsByEmployeeId(employeeId);
@@ -24,11 +26,13 @@ const getDocumentsByEmployeeId = asyncHandler(async (req, res) => {
 
 // Upload a single document
 const uploadSingleDocument = asyncHandler(async (req, res) => {
-  console.log("check 11", req.body, req.file); 
+  console.log("check 11", req.body, req.file);
   const { employeeId, documentType } = req.body;
 
   if (!employeeId || !documentType || !req.file) {
-    return res.status(400).json({ success: false, message: "Missing required fields or file" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing required fields or file" });
   }
 
   try {
@@ -70,7 +74,54 @@ const downloadDocument = async (req, res) => {
 // Delete a document
 const deleteDocument = asyncHandler(async (req, res) => {
   await documentService.deleteDocument(req.params.id);
-  res.status(200).json({ success: true, message: "Document deleted successfully" });
+  res
+    .status(200)
+    .json({ success: true, message: "Document deleted successfully" });
+});
+
+const updateDocumentStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, feedback } = req.body;
+
+  if (!status || !["pending", "approved", "rejected"].includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status",
+    });
+  }
+
+  try {
+    const updatedDocument = await documentService.updateDocumentStatus(
+      id,
+      status,
+      feedback
+    );
+
+    res.status(200).json({
+      success: true,
+      data: updatedDocument,
+    });
+  } catch (error) {
+    console.error("Error updating document status:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+// Get documents by status
+const getDocumentsByStatus = asyncHandler(async (req, res) => {
+  const status = req.params.status;
+
+  if (!status || !["pending", "approved", "rejected"].includes(status)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid status parameter" });
+  }
+
+  const documents = await documentService.getDocumentsByStatus(status);
+  res.status(200).json({ success: true, data: documents });
 });
 
 module.exports = {
@@ -80,4 +131,6 @@ module.exports = {
   previewDocument,
   deleteDocument,
   getDocumentsByEmployeeId,
+  updateDocumentStatus,
+  getDocumentsByStatus,
 };
