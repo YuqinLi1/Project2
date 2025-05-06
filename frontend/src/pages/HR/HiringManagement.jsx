@@ -11,53 +11,36 @@ import {
   Modal,
   Message,
   Loader,
+  Icon,
 } from "semantic-ui-react";
 import axios from "axios";
-import {
-  addRegistrationToken,
-  setPendingApplications,
-  setRejectedApplications,
-  setApprovedApplications,
-  setSelectedApplication,
-  setFeedbackText,
-  approveApplication,
-  rejectApplication,
-  setRegistrationTokens,
-} from "../../slices/hiringSlice";
+import { setFeedbackText } from "../../slices/hiringSlice";
 
-const HiringManagement = () => {
+const DocumentManagement = () => {
   const dispatch = useDispatch();
-  const {
-    registrationTokens,
-    pendingApplications,
-    rejectedApplications,
-    approvedApplications,
-    selectedApplication,
-    feedbackText,
-  } = useSelector((state) => state.hiring);
+  const { feedbackText } = useSelector((state) => state.hiring);
 
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [pendingDocuments, setPendingDocuments] = useState([]);
+  const [approvedDocuments, setApprovedDocuments] = useState([]);
+  const [rejectedDocuments, setRejectedDocuments] = useState([]);
 
-  // Fetch registration tokens and applications on component mount
   useEffect(() => {
-    fetchRegistrationTokens();
-    fetchPendingApplications();
-    fetchRejectedApplications();
-    fetchApprovedApplications();
+    fetchPendingDocuments();
+    fetchApprovedDocuments();
+    fetchRejectedDocuments();
   }, []);
 
-  const fetchRegistrationTokens = async () => {
+  const fetchPendingDocuments = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/hr/registration-tokens",
+        "http://localhost:5000/api/documents/status/pending",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -66,25 +49,24 @@ const HiringManagement = () => {
       );
 
       if (response.data.success) {
-        // No need to dispatch an action as registrationTokens are added one by one
-        dispatch(setRegistrationTokens(response.data.data));
+        setPendingDocuments(response.data.data);
       }
       setLoading(false);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Error fetching registration tokens"
+        err.response?.data?.message || "Error fetching pending documents"
       );
       setLoading(false);
     }
   };
 
-  const fetchPendingApplications = async () => {
+  const fetchApprovedDocuments = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/hr/onboarding/pending",
+        "http://localhost:5000/api/documents/status/approved",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -93,23 +75,24 @@ const HiringManagement = () => {
       );
 
       if (response.data.success) {
-        dispatch(setPendingApplications(response.data.data));
+        setApprovedDocuments(response.data.data);
       }
       setLoading(false);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Error fetching pending applications"
+        err.response?.data?.message || "Error fetching approved documents"
       );
       setLoading(false);
     }
   };
 
-  const fetchRejectedApplications = async () => {
+  const fetchRejectedDocuments = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/hr/onboarding/rejected",
+        "http://localhost:5000/api/documents/status/rejected",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -118,130 +101,25 @@ const HiringManagement = () => {
       );
 
       if (response.data.success) {
-        dispatch(setRejectedApplications(response.data.data));
+        setRejectedDocuments(response.data.data);
       }
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Error fetching rejected applications"
-      );
-    }
-  };
-
-  const fetchApprovedApplications = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await axios.get(
-        "http://localhost:5000/api/hr/onboarding/approved",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        dispatch(setApprovedApplications(response.data.data));
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Error fetching approved applications"
-      );
-    }
-  };
-
-  const handleSyncApplications = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "http://localhost:5000/api/hr/sync-applications",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setSuccess(`${response.data.message}. Refreshing data...`);
-
-      // Refresh application lists
-      await fetchPendingApplications();
-      await fetchRejectedApplications();
-      await fetchApprovedApplications();
-
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.message || "Error syncing applications");
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateToken = async () => {
-    if (!email) {
-      setError("Email is required");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "http://localhost:5000/api/hr/registration-token",
-        { email, name },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        dispatch(
-          addRegistrationToken({
-            email: response.data.data.email,
-            name: response.data.data.name,
-            token: response.data.data.token,
-            expiresAt: response.data.data.expiresAt,
-            status: "sent",
-            createdAt: new Date().toISOString(),
-          })
-        );
-
-        setSuccess("Registration token generated and email sent successfully");
-        setEmail("");
-        setName("");
-      }
-
       setLoading(false);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Error generating registration token"
+        err.response?.data?.message || "Error fetching rejected documents"
       );
       setLoading(false);
     }
   };
 
-  const handleViewApplication = (application) => {
-    dispatch(setSelectedApplication(application));
-    setIsApplicationModalOpen(true);
-  };
-
-  const handleApproveApplication = async () => {
-    if (!selectedApplication) return;
-
+  // Handle document approval
+  const handleApproveDocument = async (documentId) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
       const response = await axios.put(
-        `http://localhost:5000/api/hr/onboarding/${selectedApplication._id}`,
+        `http://localhost:5000/api/documents/${documentId}/status`,
         { status: "approved" },
         {
           headers: {
@@ -252,21 +130,21 @@ const HiringManagement = () => {
       );
 
       if (response.data.success) {
-        dispatch(approveApplication(selectedApplication._id));
-        setSuccess("Application approved successfully");
-        setIsApplicationModalOpen(false);
+        // Refresh documents
+        await fetchPendingDocuments();
+        await fetchApprovedDocuments();
+        setSuccess("Document approved successfully");
       }
 
       setLoading(false);
     } catch (err) {
-      setError(err.response?.data?.message || "Error approving application");
+      setError(err.response?.data?.message || "Error approving document");
       setLoading(false);
     }
   };
 
-  const handleRejectApplication = async () => {
-    if (!selectedApplication) return;
-
+  // Handle document rejection
+  const handleRejectDocument = async (documentId) => {
     if (!feedbackText) {
       setError("Feedback is required for rejection");
       return;
@@ -277,7 +155,7 @@ const HiringManagement = () => {
       const token = localStorage.getItem("token");
 
       const response = await axios.put(
-        `http://localhost:5000/api/hr/onboarding/${selectedApplication._id}`,
+        `http://localhost:5000/api/documents/${documentId}/status`,
         {
           status: "rejected",
           feedback: feedbackText,
@@ -291,39 +169,24 @@ const HiringManagement = () => {
       );
 
       if (response.data.success) {
-        dispatch(
-          rejectApplication({
-            id: selectedApplication._id,
-            feedback: feedbackText,
-          })
-        );
-
-        setSuccess("Application rejected successfully");
-        setIsApplicationModalOpen(false);
+        // Refresh documents
+        await fetchPendingDocuments();
+        await fetchRejectedDocuments();
+        setSuccess("Document rejected successfully");
         dispatch(setFeedbackText(""));
       }
 
       setLoading(false);
     } catch (err) {
-      setError(err.response?.data?.message || "Error rejecting application");
+      setError(err.response?.data?.message || "Error rejecting document");
       setLoading(false);
     }
   };
 
-  // Clear success message after 5 seconds
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(null);
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
+  // Render document management tabs
   const panes = [
     {
-      menuItem: "Registration Token",
+      menuItem: "Pending Documents",
       render: () => (
         <Tab.Pane loading={loading}>
           {error && (
@@ -340,68 +203,64 @@ const HiringManagement = () => {
             </Message>
           )}
 
-          <Form>
-            <Form.Field>
-              <label>Email *</label>
-              <Input
-                placeholder="Employee's Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </Form.Field>
-            <Form.Field>
-              <label>Name (Optional)</label>
-              <Input
-                placeholder="Employee's Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </Form.Field>
-            <Button
-              primary
-              onClick={handleGenerateToken}
-              loading={loading}
-              disabled={loading || !email}
-            >
-              Generate Token and Send Email
-            </Button>
-          </Form>
-
-          <Header as="h3" style={{ marginTop: "30px" }}>
-            Registration History
-          </Header>
-
-          {registrationTokens.length === 0 ? (
+          {pendingDocuments.length === 0 ? (
             <Message info>
-              <Message.Header>No registration tokens</Message.Header>
-              <p>No registration tokens have been generated yet.</p>
+              <Message.Header>No pending documents</Message.Header>
+              <p>There are no pending documents at this time.</p>
             </Message>
           ) : (
             <Table celled>
               <Table.Header>
                 <Table.Row>
-                  <Table.HeaderCell>Email</Table.HeaderCell>
-                  <Table.HeaderCell>Name</Table.HeaderCell>
-                  <Table.HeaderCell>Token</Table.HeaderCell>
-                  <Table.HeaderCell>Status</Table.HeaderCell>
-                  <Table.HeaderCell>Created At</Table.HeaderCell>
-                  <Table.HeaderCell>Expires At</Table.HeaderCell>
+                  <Table.HeaderCell>Employee</Table.HeaderCell>
+                  <Table.HeaderCell>Document Type</Table.HeaderCell>
+                  <Table.HeaderCell>File Name</Table.HeaderCell>
+                  <Table.HeaderCell>Actions</Table.HeaderCell>
                 </Table.Row>
               </Table.Header>
 
               <Table.Body>
-                {registrationTokens.map((record, index) => (
-                  <Table.Row key={index}>
-                    <Table.Cell>{record.email}</Table.Cell>
-                    <Table.Cell>{record.name || "N/A"}</Table.Cell>
-                    <Table.Cell>{record.token}</Table.Cell>
-                    <Table.Cell>{record.status}</Table.Cell>
+                {pendingDocuments.map((doc) => (
+                  <Table.Row key={doc._id}>
                     <Table.Cell>
-                      {new Date(record.createdAt).toLocaleString()}
+                      {doc.employeeId?.firstName && doc.employeeId?.lastName
+                        ? `${doc.employeeId.firstName} ${doc.employeeId.lastName}`
+                        : "N/A"}
                     </Table.Cell>
+                    <Table.Cell>{doc.type}</Table.Cell>
+                    <Table.Cell>{doc.fileName}</Table.Cell>
                     <Table.Cell>
-                      {new Date(record.expiresAt).toLocaleString()}
+                      <Button.Group size="small">
+                        <Button
+                          icon
+                          labelPosition="left"
+                          onClick={() =>
+                            window.open(
+                              `http://localhost:5000/api/documents/preview?employeeId=${
+                                doc.employeeId._id || doc.employeeId
+                              }&type=${encodeURIComponent(doc.type)}`,
+                              "_blank"
+                            )
+                          }
+                        >
+                          <Icon name="eye" />
+                          Preview
+                        </Button>
+                        <Button
+                          color="green"
+                          onClick={() => handleApproveDocument(doc._id)}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          color="red"
+                          onClick={() => {
+                            setSelectedDocument(doc);
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </Button.Group>
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -412,69 +271,56 @@ const HiringManagement = () => {
       ),
     },
     {
-      menuItem: "Pending Applications",
+      menuItem: "Approved Documents",
       render: () => (
         <Tab.Pane loading={loading}>
-          {error && (
-            <Message negative onDismiss={() => setError(null)}>
-              <Message.Header>Error</Message.Header>
-              <p>{error}</p>
-            </Message>
-          )}
-
-          {success && (
-            <Message positive onDismiss={() => setSuccess(null)}>
-              <Message.Header>Success</Message.Header>
-              <p>{success}</p>
-            </Message>
-          )}
-
-          <Button
-            primary
-            onClick={handleSyncApplications}
-            style={{ marginBottom: "15px" }}
-          >
-            Sync Applications
-          </Button>
-
-          {pendingApplications.length === 0 ? (
+          {approvedDocuments.length === 0 ? (
             <Message info>
-              <Message.Header>No pending applications</Message.Header>
-              <p>There are no pending applications at this time.</p>
+              <Message.Header>No approved documents</Message.Header>
+              <p>There are no approved documents at this time.</p>
             </Message>
           ) : (
             <Table celled>
               <Table.Header>
                 <Table.Row>
-                  <Table.HeaderCell>Full Name</Table.HeaderCell>
-                  <Table.HeaderCell>Email</Table.HeaderCell>
-                  <Table.HeaderCell>Submitted Date</Table.HeaderCell>
-                  <Table.HeaderCell>Action</Table.HeaderCell>
+                  <Table.HeaderCell>Employee</Table.HeaderCell>
+                  <Table.HeaderCell>Document Type</Table.HeaderCell>
+                  <Table.HeaderCell>File Name</Table.HeaderCell>
+                  <Table.HeaderCell>Approval Date</Table.HeaderCell>
+                  <Table.HeaderCell>Actions</Table.HeaderCell>
                 </Table.Row>
               </Table.Header>
 
               <Table.Body>
-                {pendingApplications.map((application) => (
-                  <Table.Row key={application._id}>
+                {approvedDocuments.map((doc) => (
+                  <Table.Row key={doc._id}>
                     <Table.Cell>
-                      {application.employeeId
-                        ? `${application.employeeId.firstName} ${application.employeeId.lastName}`
+                      {doc.employeeId?.firstName && doc.employeeId?.lastName
+                        ? `${doc.employeeId.firstName} ${doc.employeeId.lastName}`
                         : "N/A"}
                     </Table.Cell>
+                    <Table.Cell>{doc.type}</Table.Cell>
+                    <Table.Cell>{doc.fileName}</Table.Cell>
                     <Table.Cell>
-                      {application.employeeId
-                        ? application.employeeId.email
+                      {doc.reviewedAt
+                        ? new Date(doc.reviewedAt).toLocaleString()
                         : "N/A"}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {new Date(application.createdAt).toLocaleString()}
                     </Table.Cell>
                     <Table.Cell>
                       <Button
-                        primary
-                        onClick={() => handleViewApplication(application)}
+                        icon
+                        labelPosition="left"
+                        onClick={() =>
+                          window.open(
+                            `http://localhost:5000/api/documents/preview?employeeId=${
+                              doc.employeeId._id || doc.employeeId
+                            }&type=${encodeURIComponent(doc.type)}`,
+                            "_blank"
+                          )
+                        }
                       >
-                        View Application
+                        <Icon name="eye" />
+                        Preview
                       </Button>
                     </Table.Cell>
                   </Table.Row>
@@ -486,102 +332,69 @@ const HiringManagement = () => {
       ),
     },
     {
-      menuItem: "Rejected Applications",
+      menuItem: "Rejected Documents",
       render: () => (
         <Tab.Pane loading={loading}>
-          {rejectedApplications.length === 0 ? (
+          {rejectedDocuments.length === 0 ? (
             <Message info>
-              <Message.Header>No rejected applications</Message.Header>
-              <p>There are no rejected applications at this time.</p>
+              <Message.Header>No rejected documents</Message.Header>
+              <p>There are no rejected documents at this time.</p>
             </Message>
           ) : (
             <Table celled>
               <Table.Header>
                 <Table.Row>
-                  <Table.HeaderCell>Full Name</Table.HeaderCell>
-                  <Table.HeaderCell>Email</Table.HeaderCell>
-                  <Table.HeaderCell>Rejection Reason</Table.HeaderCell>
-                  <Table.HeaderCell>Rejected Date</Table.HeaderCell>
-                  <Table.HeaderCell>Action</Table.HeaderCell>
+                  <Table.HeaderCell>Employee</Table.HeaderCell>
+                  <Table.HeaderCell>Document Type</Table.HeaderCell>
+                  <Table.HeaderCell>File Name</Table.HeaderCell>
+                  <Table.HeaderCell>Rejection Date</Table.HeaderCell>
+                  <Table.HeaderCell>Feedback</Table.HeaderCell>
+                  <Table.HeaderCell>Actions</Table.HeaderCell>
                 </Table.Row>
               </Table.Header>
 
               <Table.Body>
-                {rejectedApplications.map((application) => (
-                  <Table.Row key={application._id}>
+                {rejectedDocuments.map((doc) => (
+                  <Table.Row key={doc._id}>
                     <Table.Cell>
-                      {application.employeeId
-                        ? `${application.employeeId.firstName} ${application.employeeId.lastName}`
+                      {doc.employeeId?.firstName && doc.employeeId?.lastName
+                        ? `${doc.employeeId.firstName} ${doc.employeeId.lastName}`
+                        : "N/A"}
+                    </Table.Cell>
+                    <Table.Cell>{doc.type}</Table.Cell>
+                    <Table.Cell>{doc.fileName}</Table.Cell>
+                    <Table.Cell>
+                      {doc.reviewedAt
+                        ? new Date(doc.reviewedAt).toLocaleString()
                         : "N/A"}
                     </Table.Cell>
                     <Table.Cell>
-                      {application.employeeId
-                        ? application.employeeId.email
-                        : "N/A"}
+                      {doc.feedback || "No feedback provided"}
                     </Table.Cell>
                     <Table.Cell>
-                      {application.feedback || "No feedback provided"}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {new Date(application.updatedAt).toLocaleString()}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Button
-                        onClick={() => handleViewApplication(application)}
-                      >
-                        View Application
-                      </Button>
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table>
-          )}
-        </Tab.Pane>
-      ),
-    },
-    {
-      menuItem: "Approved Applications",
-      render: () => (
-        <Tab.Pane loading={loading}>
-          {approvedApplications.length === 0 ? (
-            <Message info>
-              <Message.Header>No approved applications</Message.Header>
-              <p>There are no approved applications at this time.</p>
-            </Message>
-          ) : (
-            <Table celled>
-              <Table.Header>
-                <Table.Row>
-                  <Table.HeaderCell>Full Name</Table.HeaderCell>
-                  <Table.HeaderCell>Email</Table.HeaderCell>
-                  <Table.HeaderCell>Approved Date</Table.HeaderCell>
-                  <Table.HeaderCell>Action</Table.HeaderCell>
-                </Table.Row>
-              </Table.Header>
-
-              <Table.Body>
-                {approvedApplications.map((application) => (
-                  <Table.Row key={application._id}>
-                    <Table.Cell>
-                      {application.employeeId
-                        ? `${application.employeeId.firstName} ${application.employeeId.lastName}`
-                        : "N/A"}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {application.employeeId
-                        ? application.employeeId.email
-                        : "N/A"}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {new Date(application.updatedAt).toLocaleString()}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Button
-                        onClick={() => handleViewApplication(application)}
-                      >
-                        View Application
-                      </Button>
+                      <Button.Group size="small">
+                        <Button
+                          icon
+                          labelPosition="left"
+                          onClick={() =>
+                            window.open(
+                              `http://localhost:5000/api/documents/preview?employeeId=${
+                                doc.employeeId._id || doc.employeeId
+                              }&type=${encodeURIComponent(doc.type)}`,
+                              "_blank"
+                            )
+                          }
+                        >
+                          <Icon name="eye" />
+                          Preview
+                        </Button>
+                        <Button
+                          color="green"
+                          onClick={() => handleApproveDocument(doc._id)}
+                        >
+                          Approve
+                        </Button>
+                      </Button.Group>
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -595,174 +408,42 @@ const HiringManagement = () => {
 
   return (
     <Container>
-      <Header as="h1">Hiring Management</Header>
+      <Header as="h1">Document Management</Header>
       <Tab panes={panes} />
 
+      {/* Rejection Feedback Modal */}
       <Modal
-        open={isApplicationModalOpen}
-        onClose={() => setIsApplicationModalOpen(false)}
-        size="large"
+        open={!!selectedDocument}
+        onClose={() => setSelectedDocument(null)}
+        size="small"
       >
-        <Modal.Header>
-          Application Review
-          {selectedApplication && selectedApplication.employeeId && (
-            <>
-              : {selectedApplication.employeeId.firstName}{" "}
-              {selectedApplication.employeeId.lastName}
-            </>
-          )}
-        </Modal.Header>
+        <Modal.Header>Reject Document</Modal.Header>
         <Modal.Content>
-          {loading && <Loader active>Loading application details</Loader>}
-
-          {error && (
-            <Message negative onDismiss={() => setError(null)}>
-              <Message.Header>Error</Message.Header>
-              <p>{error}</p>
-            </Message>
-          )}
-
-          {selectedApplication && selectedApplication.employeeId && (
-            <>
-              <Table definition>
-                <Table.Body>
-                  <Table.Row>
-                    <Table.Cell width={4}>Full Name</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.firstName}{" "}
-                      {selectedApplication.employeeId.lastName}
-                      {selectedApplication.employeeId.middleName &&
-                        ` ${selectedApplication.employeeId.middleName}`}
-                      {selectedApplication.employeeId.preferredName &&
-                        ` (${selectedApplication.employeeId.preferredName})`}
-                    </Table.Cell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.Cell>Email</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.email || "N/A"}
-                    </Table.Cell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.Cell>SSN</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.ssn || "N/A"}
-                    </Table.Cell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.Cell>Date of Birth</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.dateOfBirth
-                        ? new Date(
-                            selectedApplication.employeeId.dateOfBirth
-                          ).toLocaleDateString()
-                        : "N/A"}
-                    </Table.Cell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.Cell>Gender</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.gender || "N/A"}
-                    </Table.Cell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.Cell>Cell Phone</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.contactInfo?.cellPhone ||
-                        "N/A"}
-                    </Table.Cell>
-                  </Table.Row>
-                  <Table.Row>
-                    <Table.Cell>Work Phone</Table.Cell>
-                    <Table.Cell>
-                      {selectedApplication.employeeId.contactInfo?.workPhone ||
-                        "N/A"}
-                    </Table.Cell>
-                  </Table.Row>
-                </Table.Body>
-              </Table>
-
-              <Header as="h3">Address</Header>
-              <p>
-                {selectedApplication.employeeId.currentAddress
-                  ? `${
-                      selectedApplication.employeeId.currentAddress.building ||
-                      ""
-                    } 
-           ${selectedApplication.employeeId.currentAddress.street || ""}, 
-           ${selectedApplication.employeeId.currentAddress.city || ""}, 
-           ${selectedApplication.employeeId.currentAddress.state || ""} 
-           ${selectedApplication.employeeId.currentAddress.zip || ""}`
-                  : "Address not provided"}
-              </p>
-
-              <Header as="h3">Work Authorization</Header>
-              <p>
-                <strong>Permanent Resident or Citizen: </strong>
-                {selectedApplication.employeeId.isPermanentResident
-                  ? "Yes"
-                  : "No"}
-              </p>
-
-              {selectedApplication.employeeId.isPermanentResident ? (
-                <p>
-                  <strong>Type: </strong>
-                  {selectedApplication.employeeId.residencyType || "N/A"}
-                </p>
-              ) : (
-                <>
-                  <p>
-                    <strong>Visa Type: </strong>
-                    {selectedApplication.employeeId.visaType || "N/A"}
-                  </p>
-                  <p>
-                    <strong>Start Date: </strong>
-                    {selectedApplication.employeeId.startDate
-                      ? new Date(
-                          selectedApplication.employeeId.startDate
-                        ).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-                  <p>
-                    <strong>End Date: </strong>
-                    {selectedApplication.employeeId.endDate
-                      ? new Date(
-                          selectedApplication.employeeId.endDate
-                        ).toLocaleDateString()
-                      : "N/A"}
-                  </p>
-                </>
-              )}
-            </>
-          )}
+          <Form>
+            <Form.TextArea
+              label="Rejection Feedback"
+              placeholder="Provide a reason for rejecting this document"
+              value={feedbackText}
+              onChange={(e, { value }) => dispatch(setFeedbackText(value))}
+            />
+          </Form>
         </Modal.Content>
         <Modal.Actions>
-          <Button negative onClick={() => setIsApplicationModalOpen(false)}>
-            Close
+          <Button onClick={() => setSelectedDocument(null)}>Cancel</Button>
+          <Button
+            negative
+            onClick={() => {
+              handleRejectDocument(selectedDocument._id);
+              setSelectedDocument(null);
+            }}
+            disabled={!feedbackText}
+          >
+            Confirm Rejection
           </Button>
-          {selectedApplication && selectedApplication.status === "pending" && (
-            <>
-              <Button
-                negative
-                onClick={handleRejectApplication}
-                disabled={!feedbackText}
-                loading={loading}
-              >
-                Reject
-              </Button>
-              <Button
-                positive
-                onClick={handleApproveApplication}
-                loading={loading}
-              >
-                Approve
-              </Button>
-            </>
-          )}
         </Modal.Actions>
       </Modal>
     </Container>
   );
 };
 
-export default HiringManagement;
+export default DocumentManagement;

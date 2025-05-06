@@ -15,6 +15,7 @@ import {
   Table,
 } from "semantic-ui-react";
 import axios from "axios";
+import DocumentUpload from "../../component/DocumentUpload";
 
 const EmployeeProfileDetail = () => {
   const { id } = useParams();
@@ -25,6 +26,8 @@ const EmployeeProfileDetail = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (selectedEmployee && selectedEmployee._id === id) {
@@ -84,18 +87,39 @@ const EmployeeProfileDetail = () => {
     }
   };
 
-  const handleDocumentPreview = (documentId) => {
-    window.open(
-      `http://localhost:5000/api/documents/${documentId}/preview`,
-      "_blank"
-    );
-  };
+  const handleDocumentUpload = async (file, documentType) => {
+    if (!file || !employee) return;
 
-  const handleDocumentDownload = (documentId) => {
-    window.open(
-      `http://localhost:5000/api/documents/${documentId}/download`,
-      "_blank"
-    );
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("employeeId", employee._id);
+      formData.append("documentType", documentType);
+
+      const response = await axios.post(
+        "http://localhost:5000/api/documents/upload-single",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setSuccess("Document uploaded successfully");
+        fetchDocuments(employee._id); // Refresh documents after upload
+      }
+
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error uploading document");
+      setLoading(false);
+    }
   };
 
   if (loading)
@@ -281,6 +305,19 @@ const EmployeeProfileDetail = () => {
       menuItem: "Documents",
       render: () => (
         <Tab.Pane>
+          {error && (
+            <Message negative onDismiss={() => setError(null)}>
+              <Message.Header>Error</Message.Header>
+              <p>{error}</p>
+            </Message>
+          )}
+
+          {success && (
+            <Message positive onDismiss={() => setSuccess(null)}>
+              <Message.Header>Success</Message.Header>
+              <p>{success}</p>
+            </Message>
+          )}
           {documents.length === 0 ? (
             <Message info>
               <Message.Header>No documents found</Message.Header>
@@ -288,15 +325,6 @@ const EmployeeProfileDetail = () => {
             </Message>
           ) : (
             <Table celled>
-              <Table.Header>
-                <Table.Row>
-                  <Table.HeaderCell>Type</Table.HeaderCell>
-                  <Table.HeaderCell>File Name</Table.HeaderCell>
-                  <Table.HeaderCell>Status</Table.HeaderCell>
-                  <Table.HeaderCell>Actions</Table.HeaderCell>
-                </Table.Row>
-              </Table.Header>
-
               <Table.Body>
                 {documents.map((doc) => (
                   <Table.Row key={doc._id}>
@@ -308,7 +336,14 @@ const EmployeeProfileDetail = () => {
                         <Button
                           icon
                           labelPosition="left"
-                          onClick={() => handleDocumentPreview(doc._id)}
+                          onClick={() =>
+                            window.open(
+                              `http://localhost:5000/api/documents/preview?employeeId=${
+                                doc.employeeId
+                              }&type=${encodeURIComponent(doc.type)}`,
+                              "_blank"
+                            )
+                          }
                         >
                           <Icon name="eye" />
                           Preview
@@ -316,7 +351,14 @@ const EmployeeProfileDetail = () => {
                         <Button
                           icon
                           labelPosition="left"
-                          onClick={() => handleDocumentDownload(doc._id)}
+                          onClick={() =>
+                            window.open(
+                              `http://localhost:5000/api/documents/download?employeeId=${
+                                doc.employeeId
+                              }&type=${encodeURIComponent(doc.type)}`,
+                              "_blank"
+                            )
+                          }
                         >
                           <Icon name="download" />
                           Download

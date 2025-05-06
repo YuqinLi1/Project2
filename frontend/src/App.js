@@ -4,12 +4,12 @@ import Login from "./pages/Auth/Login";
 import Onboarding from "./pages/Onboarding";
 import PersonalProfile from "./pages/PersonalProfile";
 import Management from "./pages/Management";
-import Dashboard from "./pages/EmployeeDashboard";
+
 import EmployeeProfiles from "./pages/HR/EmployeeProfiles";
 import EmployeeProfileDetail from "./pages/HR/EmployeeProfileDetail";
 import VisaManagement from "./pages/HR/Visamanagement";
 import HiringManagement from "./pages/HR/HiringManagement";
-import HRDashboard from "./pages/HrDashBoard";
+import Dashboard from "./pages/HrDashBoard";
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -60,7 +60,6 @@ function App() {
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/registration" element={<Registration />} />
-
       {/* Protected Routes for Both Roles */}
       <Route
         path="/dashboard"
@@ -70,7 +69,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
       {/* Employee Routes */}
       <Route
         path="/onboarding"
@@ -80,7 +78,6 @@ function App() {
           </EmployeeRoute>
         }
       />
-
       <Route
         path="/profile"
         element={
@@ -89,7 +86,6 @@ function App() {
           </EmployeeRoute>
         }
       />
-
       <Route
         path="/management"
         element={
@@ -98,18 +94,7 @@ function App() {
           </EmployeeRoute>
         }
       />
-
-      {/* HR Routes */}
-
-      <Route
-        path="/hr-dashboard"
-        element={
-          <HRRoute>
-            <HRDashboard />
-          </HRRoute>
-        }
-      />
-
+      {/* HR Routes */}s
       <Route
         path="/profiles"
         element={
@@ -118,7 +103,6 @@ function App() {
           </HRRoute>
         }
       />
-
       <Route
         path="/employee-profile/:id"
         element={
@@ -127,7 +111,6 @@ function App() {
           </HRRoute>
         }
       />
-
       <Route
         path="/visa-management"
         element={
@@ -136,7 +119,6 @@ function App() {
           </HRRoute>
         }
       />
-
       <Route
         path="/hiring-management"
         element={
@@ -145,7 +127,6 @@ function App() {
           </HRRoute>
         }
       />
-
       {/* Fallback Route */}
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="*" element={<Navigate to="/login" replace />} />

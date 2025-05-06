@@ -6,6 +6,8 @@ const {
   downloadDocument,
   deleteDocument,
   getDocumentsByEmployeeId,
+  updateDocumentStatus,
+  getDocumentsByStatus,
 } = require("../controllers/documentController");
 
 const { protect } = require("../middleware/auth");
@@ -20,6 +22,9 @@ router.get("/employee/:employeeId", protect, getDocumentsByEmployeeId);
 router.get("/preview", previewDocument);
 router.get("/download", downloadDocument);
 
+router.put("/:id/status", protect, updateDocumentStatus);
+
+router.get("/status/:status", protect, getDocumentsByStatus);
 // Delete a document
 router.delete("/:id", protect, deleteDocument);
 

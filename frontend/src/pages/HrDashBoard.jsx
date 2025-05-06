@@ -285,11 +285,11 @@ const Dashboard = () => {
           />
           <Menu.Item
             name="Onboarding"
-            onClick={() => handleNavigate("/application")}
+            onClick={() => handleNavigate("/onboarding")}
           />
           <Menu.Item
             name="Personal Information"
-            onClick={() => handleNavigate("/information")}
+            onClick={() => handleNavigate("/profile")}
           />
           <Menu.Item
             name="Visa Status"
@@ -349,7 +349,7 @@ const Dashboard = () => {
           </p>
           <Button
             primary
-            onClick={() => navigate("/application")}
+            onClick={() => navigate("/onboarding")}
             style={{ marginTop: "10px" }}
           >
             Complete Onboarding
@@ -366,7 +366,7 @@ const Dashboard = () => {
           </p>
           <Button
             primary
-            onClick={() => navigate("/application")}
+            onClick={() => navigate("/onboarding")}
             style={{ marginTop: "10px" }}
           >
             Review and Resubmit
@@ -465,7 +465,7 @@ const Dashboard = () => {
                     <Button
                       primary
                       fluid
-                      onClick={() => navigate("/application")}
+                      onClick={() => navigate("/onboarding")}
                     >
                       <Icon name="clipboard check" />
                       {stats.onboardingStatus === "never submit"
@@ -493,7 +493,7 @@ const Dashboard = () => {
                       <Button
                         primary
                         fluid
-                        onClick={() => navigate("/information")}
+                        onClick={() => navigate("/profile")}
                       >
                         <Icon name="user" /> Manage Personal Information
                       </Button>

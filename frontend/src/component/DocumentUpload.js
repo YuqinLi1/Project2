@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { Button, Form } from "semantic-ui-react";
 
-const DocumentUpload = ({ employeeId, documentTitle, documentType, mode, isVisa = false }) => {
+const DocumentUpload = ({
+  employeeId,
+  documentTitle,
+  documentType,
+  mode,
+  isVisa = false,
+}) => {
   const [fileName, setFileName] = useState("");
 
   const handleFileChange = (e) => {
@@ -11,7 +17,9 @@ const DocumentUpload = ({ employeeId, documentTitle, documentType, mode, isVisa 
 
   const getEndpoint = (action) => {
     const base = isVisa ? "visa-status" : "documents";
-    return `http://localhost:5000/api/${base}/${action}?employeeId=${employeeId}&type=${encodeURIComponent(documentType)}`;
+    return `http://localhost:5000/api/${base}/${action}?employeeId=${employeeId}&type=${encodeURIComponent(
+      documentType
+    )}`;
   };
 
   const handlePreview = () => {
