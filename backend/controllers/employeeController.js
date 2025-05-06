@@ -47,8 +47,8 @@ const getEmployeeProfileWithDocuments = asyncHandler(async (req, res) => {
 });
 
 const createEmployeeProfile = asyncHandler(async (req, res) => {
-  console.log("check 1 ", req.body);
-  const employee = await employeeService.createEmployee(req.body, req.user.id);
+  const userId = req.user.id;
+  const employee = await employeeService.createEmployee(req.body, userId);
   res.status(201).json({
     success: true,
     message: "Employee profile created successfully",

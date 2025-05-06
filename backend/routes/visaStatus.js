@@ -8,11 +8,14 @@ const { check } = require("express-validator");
 const {
   getVisaStatus,
   getMyVisaStatus,
-  uploadVisaDocument,
   reviewVisaDocument,
   getEmployeesWithVisaInProgress,
   sendVisaDocumentNotification,
   getAllVisaStatuses,
+  downloadVisaDocument,
+  previewVisaDocument,
+  uploadVisaDocument,
+  getVisaDocumentsByEmployee,
 } = require("../controllers/visaController");
 
 // All routes require authentication
@@ -58,5 +61,9 @@ router.post(
 
 // Get visa status by employee ID
 router.get("/:id", checkOwnership, getVisaStatus);
+
+router.get("/download", protect, downloadVisaDocument);
+router.get("/preview", protect, previewVisaDocument);
+router.get('/employee/:employeeId', getVisaDocumentsByEmployee);
 
 module.exports = router;

@@ -1,8 +1,8 @@
-const { asyncHandler } = require("../utils/errorHandler");
 const visaService = require("../services/visaService");
 const employeeService = require("../services/employeeService");
 const emailService = require("../services/emailService");
-const VisaStatus = require("../models/VisaStatus");
+const VisaStatus = require("../models/visaStatus");
+const asyncHandler = require("express-async-handler");
 
 const getVisaStatus = asyncHandler(async (req, res) => {
   // Get visa status
@@ -26,6 +26,22 @@ const getMyVisaStatus = asyncHandler(async (req, res) => {
     data: visaStatus,
   });
 });
+
+const updateVisaStatus = asyncHandler(async (req, res) => {
+  const { status, feedback } = req.body;
+  const { id } = req.params;
+
+  try {
+    const updated = await visaService.updateVisaStatus(id, status, feedback);
+    res.status(200).json({ success: true, data: updated });
+  } catch (err) {
+    res.status(404).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = {
+  updateVisaStatus,
+};
 
 const uploadVisaDocument = asyncHandler(async (req, res) => {
   const { documentType } = req.body;
@@ -95,7 +111,6 @@ const reviewVisaDocument = asyncHandler(async (req, res) => {
   });
 });
 
-
 const getEmployeesWithVisaInProgress = asyncHandler(async (req, res) => {
   // Get employees
   const employees = await visaService.getEmployeesWithOPTVisaStatus();
@@ -141,6 +156,24 @@ const getAllVisaStatuses = asyncHandler(async (req, res) => {
   });
 });
 
+
+const downloadVisaDocument = asyncHandler(async (req, res) => {
+  const { employeeId, type } = req.query;
+  await visaService.downloadVisaDocument(employeeId, type, res);
+});
+
+const previewVisaDocument = asyncHandler(async (req, res) => {
+  const { employeeId, type } = req.query;
+  await visaService.previewVisaDocument(employeeId, type, res);
+});
+
+const getVisaDocumentsByEmployee = asyncHandler(async (req, res) => {
+  const employeeId = req.params.employeeId;
+  const docs = await visaService.getVisaDocumentsByEmployeeId(employeeId);
+  res.status(200).json({ success: true, data: docs });
+});
+
+
 module.exports = {
   getVisaStatus,
   getMyVisaStatus,
@@ -149,4 +182,7 @@ module.exports = {
   getEmployeesWithVisaInProgress,
   sendVisaDocumentNotification,
   getAllVisaStatuses,
+  downloadVisaDocument,
+  previewVisaDocument,
+  getVisaDocumentsByEmployee,
 };

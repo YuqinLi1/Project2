@@ -1,4 +1,4 @@
-const VisaStatus = require("../models/VisaStatus");
+const VisaStatus = require('../models/visaStatus');
 const Document = require("../models/Document");
 const Employee = require("../models/Employee");
 const { sendVisaDocumentNotification } = require("./emailService");
@@ -155,11 +155,62 @@ const getEmployeesWithVisaExpiringSoon = async (daysThreshold = 90) => {
   return visaStatuses;
 };
 
+const updateVisaStatus = async (id, status, feedback) => {
+  const doc = await VisaStatus.findById(id);
+  if (!doc) {
+    throw new Error("Visa status record not found");
+  }
+
+  doc.status = status;
+  doc.feedback = feedback;
+  await doc.save();
+  return doc;
+};
+
+const downloadVisaDocument = async (employeeId, type, res) => {
+  const doc = await VisaStatus.findOne({ employeeId, type });
+  if (!doc) throw new Error("Document not found");
+
+  const filePath = path.resolve(doc.fileUrl);
+  res.download(filePath, doc.fileName);
+};
+
+const previewVisaDocument = async (employeeId, type, res) => {
+  const doc = await VisaStatus.findOne({ employeeId, type });
+  if (!doc) throw new Error("Document not found");
+
+  res.set("Content-Type", doc.mimeType || "application/octet-stream");
+  fs.createReadStream(path.resolve(doc.fileUrl)).pipe(res);
+};
+
+const getVisaDocumentsByEmployeeId = async (employeeId) => {
+  const visaStatus = await VisaStatus.findOne({ employeeId }).populate("documents.documentId");
+  if (!visaStatus) {
+    throw new Error("Visa status not found");
+  }
+
+  return visaStatus.documents.map(d => {
+    return {
+      type: d.type,
+      status: d.status,
+      feedback: d.feedback || "",
+      documentId: d.documentId?._id,
+      fileName: d.documentId?.fileName,
+      fileUrl: d.documentId?.fileUrl,
+      mimeType: d.documentId?.mimeType,
+    };
+  });
+};
+
 module.exports = {
   getVisaStatus,
   getEmployeesWithOPTVisaStatus,
   addVisaDocument,
   reviewVisaDocument,
+  updateVisaStatus,
   getVisaStatusesNeedingAction,
   getEmployeesWithVisaExpiringSoon,
+  downloadVisaDocument,
+  previewVisaDocument,
+  getVisaDocumentsByEmployeeId,
 };

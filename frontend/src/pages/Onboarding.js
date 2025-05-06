@@ -535,6 +535,7 @@ const Onboarding = () => {
               documentTitle="OPT Receipt"
               documentType="OPTReceipt"
               mode={status}
+              isVisa={true}
             />
           )}
 
@@ -543,6 +544,7 @@ const Onboarding = () => {
             documentTitle="Profile Picture"
             documentType="Profile"
             mode={status}
+            isVisa={false}
           />
 
           <DocumentUpload
@@ -550,6 +552,7 @@ const Onboarding = () => {
             documentTitle="Driver’s License"
             documentType="license"
             mode={status}
+            isVisa={false}
           />
 
           <DocumentUpload
@@ -557,6 +560,7 @@ const Onboarding = () => {
             documentTitle="Work Authorization"
             documentType="authorization"
             mode={status}
+            isVisa={false}
           />
           {(status === 'never submit' || status === 'rejected') && (
             <Button primary onClick={handleSubmit}>Submit</Button>

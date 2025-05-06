@@ -1,26 +1,36 @@
 const Employee = require("../models/Employee");
 const User = require("../models/User");
 const Application = require("../models/Application");
-const VisaStatus = require("../models/VisaStatus");
+const VisaStatus = require("../models/visaStatus");
 
 //employeeService
 
 const createEmployee = async (employeeData, userId) => {
-  // Check if employee already exists for this user
   const existingEmployee = await Employee.findOne({ userId });
 
   if (existingEmployee) {
     throw new Error("Employee profile already exists for this user");
   }
 
-  // Force onboardingStatus to "pending"
-  const employee = await Employee.create({
-    ...employeeData,
-    onboardingStatus: "pending",
-    userId,
-  });
+  const { userId: _, isPermanentResident, greenCardStatus, otherVisaTitle, visaStartDate, visaEndDate, ...rest } = employeeData;
 
-  return employee;
+  try{
+    const employee = await Employee.create({
+      ...rest,
+      isPermanentResident: isPermanentResident === "yes",
+      residencyType: isPermanentResident === "yes" ? greenCardStatus : null,
+      visaType: isPermanentResident === "yes" ? null : employeeData.visaType,
+      visaTitle: isPermanentResident === "yes" ? null : otherVisaTitle,
+      startDate: isPermanentResident === "yes" ? null : visaStartDate,
+      endDate: isPermanentResident === "yes" ? null : visaEndDate,
+      onboardingStatus: "pending",
+      userId,
+    });
+    return employee;
+  }catch (error) {
+    console.log("check 5 ", error.message);
+    return undefined;
+  }
 };
 
 const getEmployeeById = async (employeeId) => {
@@ -109,39 +119,44 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
 
   // Create or update visa status if applicable
   if (!applicationData.isPermanentResident && applicationData.visaType) {
-    let visaStatus = await VisaStatus.findOne({ employeeId });
+    try{
+      let visaStatus = await VisaStatus.findOne({ employeeId });
 
-    if (!visaStatus) {
-      visaStatus = new VisaStatus({
-        employeeId,
-        isPermanentResident: applicationData.isPermanentResident,
-        visaType: applicationData.visaType,
-        visaTitle: applicationData.visaTitle,
-        startDate: applicationData.startDate,
-        endDate: applicationData.endDate,
-        currentStep:
-          applicationData.visaType === "F1(CPT/OPT)" ? "OPT Receipt" : null,
-        documents: [],
-      });
-    } else {
-      visaStatus.isPermanentResident = applicationData.isPermanentResident;
-      visaStatus.visaType = applicationData.visaType;
-      visaStatus.visaTitle = applicationData.visaTitle;
-      visaStatus.startDate = applicationData.startDate;
-      visaStatus.endDate = applicationData.endDate;
-
-      if (
-        applicationData.visaType === "F1(CPT/OPT)" &&
-        visaStatus.currentStep === null
-      ) {
-        visaStatus.currentStep = "OPT Receipt";
+      if (!visaStatus) {
+        visaStatus = new VisaStatus({
+          employeeId,
+          isPermanentResident: applicationData.isPermanentResident,
+          visaType: applicationData.visaType,
+          visaTitle: applicationData.visaTitle,
+          startDate: applicationData.startDate,
+          endDate: applicationData.endDate,
+          currentStep:
+            applicationData.visaType === "F1(CPT/OPT)" ? "OPT Receipt" : null,
+          documents: [],
+        });
+      } else {
+        visaStatus.isPermanentResident = applicationData.isPermanentResident;
+        visaStatus.visaType = applicationData.visaType;
+        visaStatus.visaTitle = applicationData.visaTitle;
+        visaStatus.startDate = applicationData.startDate;
+        visaStatus.endDate = applicationData.endDate;
+  
+        if (
+          applicationData.visaType === "F1(CPT/OPT)" &&
+          visaStatus.currentStep === null
+        ) {
+          visaStatus.currentStep = "OPT Receipt";
+        }
       }
+  
+      await visaStatus.save();
+      return application;
+    } catch (error) {
+      console.log("check 5 ", error.message);
+      return undefined;
     }
-
-    await visaStatus.save();
   }
-
-  return application;
+   
 };
 
 const reviewOnboardingApplication = async (

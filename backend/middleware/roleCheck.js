@@ -29,7 +29,6 @@ const checkOwnership = asyncHandler(async (req, res, next) => {
 });
 
 const checkOnboardingStatus = asyncHandler(async (req, res, next) => {
-  // Get the employee associated with the current user
   const employee = await Employee.findOne({ userId: req.user.id });
 
   if (!employee) {
@@ -39,8 +38,9 @@ const checkOnboardingStatus = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // If employee has not completed onboarding
-  if (employee.onboardingStatus !== "approved") {
+  // Allow only approved or pending users
+  const allowedStatuses = ["approved", "pending"];
+  if (!allowedStatuses.includes(employee.onboardingStatus)) {
     return res.status(403).json({
       success: false,
       message: "Please complete the onboarding process first",
