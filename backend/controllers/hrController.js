@@ -55,10 +55,12 @@ const generateRegistrationToken = asyncHandler(async (req, res) => {
     success: true,
     message: "Registration token generated and email sent successfully",
     data: {
+      _id: tokenDoc._id,
       token: tokenDoc.token,
       email: tokenDoc.email,
       name: tokenDoc.name,
       expiresAt: tokenDoc.expiresAt,
+      isUsed: tokenDoc.isUsed,
     },
   });
 });
@@ -71,6 +73,85 @@ const getRegistrationTokens = asyncHandler(async (req, res) => {
     success: true,
     count: tokens.length,
     data: tokens,
+  });
+});
+
+const resendRegistrationEmail = asyncHandler(async (req, res) => {
+  const tokenId = req.params.id;
+
+  // Find token
+  const token = await Token.findById(tokenId);
+
+  if (!token) {
+    return res.status(404).json({
+      success: false,
+      message: "Token not found",
+    });
+  }
+
+  if (token.isUsed) {
+    return res.status(400).json({
+      success: false,
+      message: "Token has already been used",
+    });
+  }
+
+  if (token.expiresAt < new Date()) {
+    return res.status(400).json({
+      success: false,
+      message: "Token has expired",
+    });
+  }
+
+  try {
+    // Send email
+    await emailService.sendRegistrationEmail(
+      token.email,
+      token.name || "New Employee",
+      token.token
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Registration email resent successfully",
+    });
+  } catch (error) {
+    console.error("Error resending email:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to resend registration email",
+    });
+  }
+});
+
+// Revoke registration token
+const revokeRegistrationToken = asyncHandler(async (req, res) => {
+  const tokenId = req.params.id;
+
+  // Find and update token
+  const token = await Token.findById(tokenId);
+
+  if (!token) {
+    return res.status(404).json({
+      success: false,
+      message: "Token not found",
+    });
+  }
+
+  if (token.isUsed) {
+    return res.status(400).json({
+      success: false,
+      message: "Token has already been used",
+    });
+  }
+
+  // Set token to expire now
+  token.expiresAt = new Date();
+  await token.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Token revoked successfully",
   });
 });
 
@@ -245,6 +326,8 @@ module.exports = {
   searchEmployees,
   generateRegistrationToken,
   getRegistrationTokens,
+  resendRegistrationEmail,
+  revokeRegistrationToken,
   getPendingOnboardingApplications,
   reviewOnboardingApplication,
   getRejectedOnboardingApplications,
