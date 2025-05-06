@@ -622,153 +622,118 @@ const HiringManagement = () => {
             </Message>
           )}
 
-          {selectedApplication && (
-            <div>
-              <Header as="h3">Personal Information</Header>
+          {selectedApplication && selectedApplication.employeeId && (
+            <>
+              <Table definition>
+                <Table.Body>
+                  <Table.Row>
+                    <Table.Cell width={4}>Full Name</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.firstName}{" "}
+                      {selectedApplication.employeeId.lastName}
+                      {selectedApplication.employeeId.middleName &&
+                        ` ${selectedApplication.employeeId.middleName}`}
+                      {selectedApplication.employeeId.preferredName &&
+                        ` (${selectedApplication.employeeId.preferredName})`}
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>Email</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.email || "N/A"}
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>SSN</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.ssn || "N/A"}
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>Date of Birth</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.dateOfBirth
+                        ? new Date(
+                            selectedApplication.employeeId.dateOfBirth
+                          ).toLocaleDateString()
+                        : "N/A"}
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>Gender</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.gender || "N/A"}
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>Cell Phone</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.contactInfo?.cellPhone ||
+                        "N/A"}
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>Work Phone</Table.Cell>
+                    <Table.Cell>
+                      {selectedApplication.employeeId.contactInfo?.workPhone ||
+                        "N/A"}
+                    </Table.Cell>
+                  </Table.Row>
+                </Table.Body>
+              </Table>
 
-              {selectedApplication.employeeId && (
+              <Header as="h3">Address</Header>
+              <p>
+                {selectedApplication.employeeId.currentAddress
+                  ? `${
+                      selectedApplication.employeeId.currentAddress.building ||
+                      ""
+                    } 
+           ${selectedApplication.employeeId.currentAddress.street || ""}, 
+           ${selectedApplication.employeeId.currentAddress.city || ""}, 
+           ${selectedApplication.employeeId.currentAddress.state || ""} 
+           ${selectedApplication.employeeId.currentAddress.zip || ""}`
+                  : "Address not provided"}
+              </p>
+
+              <Header as="h3">Work Authorization</Header>
+              <p>
+                <strong>Permanent Resident or Citizen: </strong>
+                {selectedApplication.employeeId.isPermanentResident
+                  ? "Yes"
+                  : "No"}
+              </p>
+
+              {selectedApplication.employeeId.isPermanentResident ? (
+                <p>
+                  <strong>Type: </strong>
+                  {selectedApplication.employeeId.residencyType || "N/A"}
+                </p>
+              ) : (
                 <>
-                  <Table definition>
-                    <Table.Body>
-                      <Table.Row>
-                        <Table.Cell width={4}>Full Name</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.firstName}{" "}
-                          {selectedApplication.employeeId.lastName}
-                          {selectedApplication.employeeId.middleName &&
-                            ` ${selectedApplication.employeeId.middleName}`}
-                          {selectedApplication.employeeId.preferredName &&
-                            ` (${selectedApplication.employeeId.preferredName})`}
-                        </Table.Cell>
-                      </Table.Row>
-                      <Table.Row>
-                        <Table.Cell>Email</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.email}
-                        </Table.Cell>
-                      </Table.Row>
-                      <Table.Row>
-                        <Table.Cell>SSN</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.ssn || "N/A"}
-                        </Table.Cell>
-                      </Table.Row>
-                      <Table.Row>
-                        <Table.Cell>Date of Birth</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.dateOfBirth
-                            ? new Date(
-                                selectedApplication.employeeId.dateOfBirth
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </Table.Cell>
-                      </Table.Row>
-                      <Table.Row>
-                        <Table.Cell>Gender</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.gender || "N/A"}
-                        </Table.Cell>
-                      </Table.Row>
-                      <Table.Row>
-                        <Table.Cell>Cell Phone</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.cellPhone || "N/A"}
-                        </Table.Cell>
-                      </Table.Row>
-                      <Table.Row>
-                        <Table.Cell>Work Phone</Table.Cell>
-                        <Table.Cell>
-                          {selectedApplication.employeeId.workPhone || "N/A"}
-                        </Table.Cell>
-                      </Table.Row>
-                    </Table.Body>
-                  </Table>
-
-                  <Header as="h3">Address</Header>
                   <p>
-                    {selectedApplication.employeeId.address
-                      ? `${
-                          selectedApplication.employeeId.address.building || ""
-                        } 
-                         ${
-                           selectedApplication.employeeId.address.street || ""
-                         }, 
-                         ${selectedApplication.employeeId.address.city || ""}, 
-                         ${selectedApplication.employeeId.address.state || ""} 
-                         ${selectedApplication.employeeId.address.zip || ""}`
-                      : "Address not provided"}
+                    <strong>Visa Type: </strong>
+                    {selectedApplication.employeeId.visaType || "N/A"}
                   </p>
-
-                  <Header as="h3">Work Authorization</Header>
                   <p>
-                    <strong>Permanent Resident or Citizen: </strong>
-                    {selectedApplication.employeeId.isPermanentResident
-                      ? "Yes"
-                      : "No"}
+                    <strong>Start Date: </strong>
+                    {selectedApplication.employeeId.startDate
+                      ? new Date(
+                          selectedApplication.employeeId.startDate
+                        ).toLocaleDateString()
+                      : "N/A"}
                   </p>
-
-                  {selectedApplication.employeeId.isPermanentResident ? (
-                    <p>
-                      <strong>Type: </strong>
-                      {selectedApplication.employeeId.permanentResidentType}
-                    </p>
-                  ) : (
-                    <>
-                      <p>
-                        <strong>Visa Type: </strong>
-                        {selectedApplication.employeeId.workAuthorizationType ||
-                          "N/A"}
-                      </p>
-                      {selectedApplication.employeeId.workAuthorization && (
-                        <>
-                          <p>
-                            <strong>Start Date: </strong>
-                            {new Date(
-                              selectedApplication.employeeId.workAuthorization.startDate
-                            ).toLocaleDateString()}
-                          </p>
-                          <p>
-                            <strong>End Date: </strong>
-                            {new Date(
-                              selectedApplication.employeeId.workAuthorization.endDate
-                            ).toLocaleDateString()}
-                          </p>
-                        </>
-                      )}
-                    </>
-                  )}
+                  <p>
+                    <strong>End Date: </strong>
+                    {selectedApplication.employeeId.endDate
+                      ? new Date(
+                          selectedApplication.employeeId.endDate
+                        ).toLocaleDateString()
+                      : "N/A"}
+                  </p>
                 </>
               )}
-
-              <Header as="h3">Action</Header>
-              {selectedApplication.status === "pending" ? (
-                <Form>
-                  <Form.TextArea
-                    label="Feedback (required for rejection)"
-                    placeholder="Provide feedback on why the application is being rejected..."
-                    value={feedbackText}
-                    onChange={(e) => dispatch(setFeedbackText(e.target.value))}
-                  />
-                </Form>
-              ) : selectedApplication.status === "rejected" ? (
-                <Message warning>
-                  <Message.Header>Rejection Reason:</Message.Header>
-                  <p>
-                    {selectedApplication.feedback || "No feedback provided"}
-                  </p>
-                </Message>
-              ) : (
-                <Message positive>
-                  <Message.Header>
-                    This application has been approved.
-                  </Message.Header>
-                  <p>
-                    Approved on{" "}
-                    {new Date(selectedApplication.updatedAt).toLocaleString()}
-                  </p>
-                </Message>
-              )}
-            </div>
+            </>
           )}
         </Modal.Content>
         <Modal.Actions>

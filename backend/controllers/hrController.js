@@ -76,38 +76,18 @@ const getRegistrationTokens = asyncHandler(async (req, res) => {
 
 const getPendingOnboardingApplications = asyncHandler(async (req, res) => {
   try {
-    console.log("Fetching pending applications");
-
-    // First, check for any applications at all
-    const totalApps = await Application.countDocuments({});
-    console.log(`Total applications in database: ${totalApps}`);
-
-    // Then check for applications with status pending
-    const pendingCount = await Application.countDocuments({
-      status: "pending",
-    });
-    console.log(`Applications with pending status: ${pendingCount}`);
-
     // List all unique status values in applications
     const uniqueStatuses = await Application.distinct("status");
     console.log("Unique application statuses:", uniqueStatuses);
 
     // Get applications with pending status
     const applications = await Application.find({ status: "pending" })
-      .populate("employeeId", "firstName lastName email")
+      .populate({
+        path: "employeeId",
+        select:
+          "firstName lastName email ssn dateOfBirth gender contactInfo currentAddress isPermanentResident residencyType visaType startDate endDate",
+      })
       .sort({ createdAt: 1 });
-
-    console.log(
-      "Pending applications with populated data:",
-      applications.map((app) => ({
-        id: app._id,
-        status: app.status,
-        employeeId: app.employeeId?._id || "Not populated",
-        name: app.employeeId
-          ? `${app.employeeId.firstName} ${app.employeeId.lastName}`
-          : "Unknown",
-      }))
-    );
 
     res.status(200).json({
       success: true,
@@ -212,8 +192,12 @@ const getRejectedOnboardingApplications = asyncHandler(async (req, res) => {
   try {
     // Get applications
     const applications = await Application.find({ status: "rejected" })
-      .populate("employeeId", "firstName lastName email")
-      .sort({ createdAt: -1 });
+      .populate({
+        path: "employeeId",
+        select:
+          "firstName lastName email ssn dateOfBirth gender contactInfo currentAddress isPermanentResident residencyType visaType startDate endDate",
+      })
+      .sort({ createdAt: 1 });
 
     res.status(200).json({
       success: true,
@@ -234,8 +218,12 @@ const getApprovedOnboardingApplications = asyncHandler(async (req, res) => {
   try {
     // Get applications
     const applications = await Application.find({ status: "approved" })
-      .populate("employeeId", "firstName lastName email")
-      .sort({ createdAt: -1 });
+      .populate({
+        path: "employeeId",
+        select:
+          "firstName lastName email ssn dateOfBirth gender contactInfo currentAddress isPermanentResident residencyType visaType startDate endDate",
+      })
+      .sort({ createdAt: 1 });
 
     res.status(200).json({
       success: true,

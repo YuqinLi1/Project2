@@ -1,14 +1,15 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Registration from "./pages/Auth/Registration";
 import Login from "./pages/Auth/Login";
-import Onboarding from "./pages/Onboarding"
+import Onboarding from "./pages/Onboarding";
 import PersonalProfile from "./pages/PersonalProfile";
 import Management from "./pages/Management";
-import Dashboard from "./pages/EmployeeDashboard"; 
+import Dashboard from "./pages/EmployeeDashboard";
 import EmployeeProfiles from "./pages/HR/EmployeeProfiles";
 import EmployeeProfileDetail from "./pages/HR/EmployeeProfileDetail";
 import VisaManagement from "./pages/HR/Visamanagement";
 import HiringManagement from "./pages/HR/HiringManagement";
+import HRDashboard from "./pages/HrDashBoard";
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -99,6 +100,16 @@ function App() {
       />
 
       {/* HR Routes */}
+
+      <Route
+        path="/hr-dashboard"
+        element={
+          <HRRoute>
+            <HRDashboard />
+          </HRRoute>
+        }
+      />
+
       <Route
         path="/profiles"
         element={
