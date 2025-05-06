@@ -12,7 +12,7 @@ const { protect } = require("../middleware/auth");
 const { uploadSingleFile } = require("../middleware/fileUpload");
 
 // Upload a single document
-router.post("/upload-single", uploadSingleFile("file"), uploadSingleDocument);
+router.post("/upload-single", uploadSingleFile("document"), uploadSingleDocument);
 
 // Get all documents for a specific employee
 router.get("/employee/:employeeId", protect, getDocumentsByEmployeeId);

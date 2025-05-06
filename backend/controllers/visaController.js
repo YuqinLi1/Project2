@@ -3,29 +3,7 @@ const employeeService = require("../services/employeeService");
 const emailService = require("../services/emailService");
 const VisaStatus = require("../models/visaStatus");
 const asyncHandler = require("express-async-handler");
-
-const getVisaStatus = asyncHandler(async (req, res) => {
-  // Get visa status
-  const visaStatus = await visaService.getVisaStatus(req.params.id);
-
-  res.status(200).json({
-    success: true,
-    data: visaStatus,
-  });
-});
-
-const getMyVisaStatus = asyncHandler(async (req, res) => {
-  // Get employee
-  const employee = await employeeService.getEmployeeByUserId(req.user.id);
-
-  // Get visa status
-  const visaStatus = await visaService.getVisaStatus(employee._id);
-
-  res.status(200).json({
-    success: true,
-    data: visaStatus,
-  });
-});
+const e = require("express");
 
 const updateVisaStatus = asyncHandler(async (req, res) => {
   const { status, feedback } = req.body;
@@ -39,14 +17,10 @@ const updateVisaStatus = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = {
-  updateVisaStatus,
-};
-
-const uploadVisaDocument = asyncHandler(async (req, res) => {
+const uploadVisaDocument = async (req, res) => {
   const { documentType } = req.body;
+  console.log("check 0 ", documentType);
 
-  // Validate input
   if (!documentType) {
     return res.status(400).json({
       success: false,
@@ -54,62 +28,36 @@ const uploadVisaDocument = asyncHandler(async (req, res) => {
     });
   }
 
-  // Get employee
-  const employee = await employeeService.getEmployeeByUserId(req.user.id);
+  console.log("check 1 ", documentType);
 
-  // Add document
-  const document = await visaService.addVisaDocument(
-    employee._id,
-    documentType,
-    req.fileInfo
-  );
+  try {
+    const employee = await employeeService.getEmployeeByUserId(req.user.id);
+    if (!employee) {
+      console.log("check 2: employee not found for user", req.user.id);
+      return res.status(404).json({ success: false, message: "Employee not found" });
+    }
 
-  res.status(201).json({
-    success: true,
-    message: "Document uploaded successfully",
-    data: document,
-  });
-});
+    const document = await visaService.addVisaDocument(
+      employee._id,
+      documentType,
+      req.fileInfo
+    );
 
-const reviewVisaDocument = asyncHandler(async (req, res) => {
-  const { status, feedback } = req.body;
+    console.log("check 3: document uploaded", document);
 
-  // Validate input
-  if (!status || !["approved", "rejected"].includes(status)) {
-    return res.status(400).json({
+    return res.status(201).json({
+      success: true,
+      message: "Document uploaded successfully",
+      data: document,
+    });
+  } catch (error) {
+    console.error("check 4: error uploading visa document", error);
+    return res.status(500).json({
       success: false,
-      message: "Please provide valid status (approved/rejected)",
+      message: error.message || "Internal server error",
     });
   }
-
-  // Review document
-  const result = await visaService.reviewVisaDocument(
-    req.params.id,
-    status,
-    feedback,
-    req.user.id
-  );
-
-  // If document was rejected, send email with feedback
-  if (status === "rejected" && feedback) {
-    const employee = await employeeService.getEmployeeById(
-      result.document.employeeId
-    );
-
-    await emailService.sendDocumentFeedbackEmail(
-      employee.email,
-      `${employee.firstName} ${employee.lastName}`,
-      result.document.type,
-      feedback
-    );
-  }
-
-  res.status(200).json({
-    success: true,
-    message: `Document ${status} successfully`,
-    data: result,
-  });
-});
+};
 
 const getEmployeesWithVisaInProgress = asyncHandler(async (req, res) => {
   // Get employees
@@ -175,10 +123,7 @@ const getVisaDocumentsByEmployee = asyncHandler(async (req, res) => {
 
 
 module.exports = {
-  getVisaStatus,
-  getMyVisaStatus,
   uploadVisaDocument,
-  reviewVisaDocument,
   getEmployeesWithVisaInProgress,
   sendVisaDocumentNotification,
   getAllVisaStatuses,

@@ -1,17 +1,5 @@
 const VisaStatus = require('../models/visaStatus');
-const Document = require("../models/Document");
 const Employee = require("../models/Employee");
-const { sendVisaDocumentNotification } = require("./emailService");
-
-const getVisaStatus = async (employeeId) => {
-  const visaStatus = await VisaStatus.findOne({ employeeId });
-
-  if (!visaStatus) {
-    throw new Error("Visa status not found");
-  }
-
-  return visaStatus;
-};
 
 const getEmployeesWithOPTVisaStatus = async () => {
   const visaStatuses = await VisaStatus.find({
@@ -23,116 +11,41 @@ const getEmployeesWithOPTVisaStatus = async () => {
 };
 
 const addVisaDocument = async (employeeId, documentType, fileInfo) => {
-  // Check if employee exists
+  // Step 1: Check employee existence
   const employee = await Employee.findById(employeeId);
   if (!employee) {
     throw new Error("Employee not found");
   }
 
-  // Check if visa status exists
+  // Step 2: Find VisaStatus document for employee
   const visaStatus = await VisaStatus.findOne({ employeeId });
   if (!visaStatus) {
     throw new Error("Visa status not found");
   }
 
-  // Check if the document type matches the current step
+  // Step 3: Enforce current step match (optional, can be removed if not needed)
   if (visaStatus.currentStep !== documentType) {
-    throw new Error(
-      `Cannot upload ${documentType} at this time. Current step is ${visaStatus.currentStep}`
-    );
+    throw new Error(`Cannot upload ${documentType} at this time. Current step is ${visaStatus.currentStep}`);
   }
 
-  // Create document
-  const document = await Document.create({
-    employeeId,
+  // Step 4: Push document directly to visaStatus.documents[]
+  visaStatus.documents.push({
     type: documentType,
     fileName: fileInfo.fileName,
     fileUrl: fileInfo.fileUrl,
     fileSize: fileInfo.fileSize,
     mimeType: fileInfo.mimeType,
     status: "pending",
-  });
-
-  // Add document to visa status
-  visaStatus.documents.push({
-    documentId: document._id,
-    type: documentType,
-    status: "pending",
     uploadDate: new Date(),
   });
 
+  // Step 5: Save VisaStatus document
   await visaStatus.save();
 
-  return document;
-};
-
-const reviewVisaDocument = async (documentId, status, feedback, reviewerId) => {
-  // Update document
-  const document = await Document.findByIdAndUpdate(
-    documentId,
-    {
-      status,
-      feedback,
-      reviewedBy: reviewerId,
-      reviewedAt: new Date(),
-    },
-    { new: true }
-  );
-
-  if (!document) {
-    throw new Error("Document not found");
-  }
-
-  // Find visa status
-  const visaStatus = await VisaStatus.findOne({
-    employeeId: document.employeeId,
-    "documents.documentId": documentId,
-  });
-
-  if (!visaStatus) {
-    throw new Error("Visa status not found");
-  }
-
-  // Update document in visa status
-  const docIndex = visaStatus.documents.findIndex(
-    (doc) => doc.documentId.toString() === documentId
-  );
-
-  if (docIndex !== -1) {
-    visaStatus.documents[docIndex].status = status;
-    visaStatus.documents[docIndex].feedback = feedback || "";
-    visaStatus.documents[docIndex].reviewDate = new Date();
-
-    // Update current step if approved
-    if (status === "approved") {
-      const nextStepMap = {
-        "OPT Receipt": "OPT EAD",
-        "OPT EAD": "I-983",
-        "I-983": "I-20",
-        "I-20": "Completed",
-      };
-
-      if (visaStatus.currentStep in nextStepMap) {
-        visaStatus.currentStep = nextStepMap[visaStatus.currentStep];
-      }
-
-      // Send notification email for next step if not completed
-      if (visaStatus.currentStep !== "Completed") {
-        const employee = await Employee.findById(document.employeeId);
-        if (employee) {
-          await sendVisaDocumentNotification(
-            employee.email,
-            `${employee.firstName} ${employee.lastName}`,
-            visaStatus.currentStep
-          );
-        }
-      }
-    }
-
-    await visaStatus.save();
-  }
-
-  return { document, visaStatus };
+  return {
+    success: true,
+    message: "Visa document saved in VisaStatus",
+  };
 };
 
 const getVisaStatusesNeedingAction = async () => {
@@ -184,29 +97,26 @@ const previewVisaDocument = async (employeeId, type, res) => {
 };
 
 const getVisaDocumentsByEmployeeId = async (employeeId) => {
-  const visaStatus = await VisaStatus.findOne({ employeeId }).populate("documents.documentId");
+  const visaStatus = await VisaStatus.findOne({ employeeId });
   if (!visaStatus) {
     throw new Error("Visa status not found");
   }
 
-  return visaStatus.documents.map(d => {
-    return {
-      type: d.type,
-      status: d.status,
-      feedback: d.feedback || "",
-      documentId: d.documentId?._id,
-      fileName: d.documentId?.fileName,
-      fileUrl: d.documentId?.fileUrl,
-      mimeType: d.documentId?.mimeType,
-    };
-  });
+  return visaStatus.documents.map(d => ({
+    type: d.type,
+    status: d.status,
+    feedback: d.feedback || "",
+    fileName: d.fileName,
+    fileUrl: d.fileUrl,
+    mimeType: d.mimeType,
+    uploadDate: d.uploadDate,
+    reviewDate: d.reviewDate,
+  }));
 };
 
 module.exports = {
-  getVisaStatus,
   getEmployeesWithOPTVisaStatus,
   addVisaDocument,
-  reviewVisaDocument,
   updateVisaStatus,
   getVisaStatusesNeedingAction,
   getEmployeesWithVisaExpiringSoon,

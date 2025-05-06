@@ -36,14 +36,14 @@ const VisaStatusSchema = new mongoose.Schema(
     endDate: Date,
     documents: [
       {
-        documentId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Document",
-        },
         type: {
           type: String,
           enum: ["OPT Receipt", "OPT EAD", "I-983", "I-20"],
         },
+        fileName: String,
+        fileUrl: String,
+        fileSize: Number,
+        mimeType: String,
         status: {
           type: String,
           enum: ["pending", "approved", "rejected"],

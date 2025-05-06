@@ -5,6 +5,7 @@ import {
 } from 'semantic-ui-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import Navigator from '../component/Navigator';
 import axios from 'axios';
 import {
   setInfo,
@@ -190,6 +191,7 @@ const PersonalProfile = () => {
 
   return (
     <Container style={{ marginTop: '2em' }}>
+      <Navigator />
       <Menu inverted>
         <Menu.Item header>Personal Information</Menu.Item>
       </Menu>

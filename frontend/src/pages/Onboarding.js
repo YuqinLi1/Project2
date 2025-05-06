@@ -110,12 +110,13 @@ const Onboarding = () => {
     }
 
     const decoded = jwtDecode(token);
-    const userId = decoded.id;
+    const userIdFromToken = decoded.id;
+    setUserId(userIdFromToken)
     const emailFromToken = decoded.email || decoded.username || "";
     setEmail(emailFromToken);
 
     axios
-      .get(`http://localhost:5000/api/employee/status/${userId}`, {
+    .get(`http://localhost:5000/api/employee/status/${userIdFromToken}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -125,15 +126,15 @@ const Onboarding = () => {
           dispatch(setFormData({ email: emailFromToken }));
           setReadOnly(false);
         } else if (status === "pending") {
-          setAlertMessage("Your application is being reviewed.");
+          setAlertMessage("Please wait for HR to review your application.");
           setReadOnly(true);
-          fetchProfile(token);
+          fetchProfile(token, userIdFromToken); 
         } else if (status === "rejected") {
           setAlertMessage(
             "Your application was rejected. Please review and resubmit."
           );
           setReadOnly(false);
-          fetchProfile(token);
+          fetchProfile(token, userIdFromToken); 
         }
       })
       .catch(() => {
@@ -149,7 +150,41 @@ const Onboarding = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      dispatch(setFormData(res.data.data)); // ✅ adjust if response shape includes .data
+
+      const emp = res.data.data;
+      setUserId(emp._id);
+      dispatch(setFormData({
+      email: emp.email,
+      firstName: emp.firstName,
+      lastName: emp.lastName,
+      middleName: emp.middleName,
+      preferedName: emp.preferredName,
+      ssn: emp.ssn,
+      dob: emp.dateOfBirth?.substring(0, 10),
+      phone: emp.contactInfo?.cellPhone,
+      address: emp.currentAddress?.street,
+      city: emp.currentAddress?.city,
+      state: emp.currentAddress?.state,
+      zip: emp.currentAddress?.zip,
+      isPermanentResident: emp.isPermanentResident ? "yes" : "no",
+      greenCardStatus: emp.residencyType,
+      visaType: emp.visaType,
+      otherVisaTitle: emp.visaTitle,
+      visaStartDate: emp.startDate?.substring(0, 10),
+      visaEndDate: emp.endDate?.substring(0, 10),
+      referenceFirstName: emp.reference?.firstName,
+      referenceMiddleName: emp.reference?.middleName,
+      referenceLastName: emp.reference?.lastName,
+      referencePhone: emp.reference?.phone,
+      referenceEmail: emp.reference?.email,
+      referenceRelationship: emp.reference?.relationship,
+      emergencyFirstName: emp.emergencyContacts?.[0]?.firstName,
+      emergencyMiddleName: emp.emergencyContacts?.[0]?.middleName,
+      emergencyLastName: emp.emergencyContacts?.[0]?.lastName,
+      emergencyPhone: emp.emergencyContacts?.[0]?.phone,
+      emergencyEmail: emp.emergencyContacts?.[0]?.email,
+      emergencyRelationship: emp.emergencyContacts?.[0]?.relationship,
+    }));
     } catch (err) {
       console.error("Failed to load profile", err);
     }
@@ -204,7 +239,7 @@ const Onboarding = () => {
           },
         ],
       };
-
+  
       const res = await axios.post(
         "http://localhost:5000/api/employee",
         payload,
@@ -212,27 +247,33 @@ const Onboarding = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
+  
       const employeeId = res.data.employeeId;
+  
       const docTypes = [
-        { field: "Profile", type: "Profile Picture" },
-        { field: "license", type: "Driver's License" },
-        { field: "authorization", type: "Work Authorization" },
+        { type: "Profile Picture" },
+        { type: "Driver's License" },
+        { type: "Work Authorization" },
       ];
-
+  
       if (formData.visaType === "F1(CPT/OPT)") {
-        docTypes.unshift({ field: "OPTReceipt", type: "OPT Receipt" });
+        docTypes.unshift({ type: "OPT Receipt" });
       }
-
-      for (const { field, type } of docTypes) {
-        const file = document.getElementById(`file-${field}`)?.files[0];
+  
+      for (const { type } of docTypes) {
+        const file = document.getElementById(`file-${type}`)?.files?.[0];
         if (file) {
           const form = new FormData();
-          form.append("file", file);
+          form.append("document", file);
           form.append("employeeId", employeeId);
-          form.append("documentType", type); // send correct label here
+          form.append("documentType", type);
+  
+          const isVisa = type === "OPT Receipt";
+  
           await axios.post(
-            "http://localhost:5000/api/documents/upload-single",
+            isVisa
+              ? "http://localhost:5000/api/visa-status/document"
+              : "http://localhost:5000/api/documents/upload-single",
             form,
             {
               headers: {
@@ -243,19 +284,19 @@ const Onboarding = () => {
           );
         }
       }
-
+  
       window.alert("Submission successful and waiting for review");
       navigate("/dashboard");
     } catch (err) {
       console.error("Submission error", err);
       window.alert("Submission failed. Rolling back...");
-
+  
       try {
         await axios.delete(`http://localhost:5000/api/employee/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } catch {}
-
+  
       try {
         await axios.delete(
           `http://localhost:5000/api/documents/employee/${userId}`,
@@ -264,18 +305,20 @@ const Onboarding = () => {
           }
         );
       } catch {}
-
-      // Reset form fields in Redux
+  
       dispatch(setFormData({}));
-
-      // Clear file inputs manually
-      const docTypes = ["Profile", "license", "authorization", "OPTReceipt"];
+  
+      const docTypes = [
+        "Profile Picture",
+        "Driver's License",
+        "Work Authorization",
+        "OPT Receipt",
+      ];
       for (const type of docTypes) {
         const input = document.getElementById(`file-${type}`);
         if (input) input.value = "";
       }
-
-      // ✅ Force refresh the page to re-trigger useEffect and clear local state
+  
       window.location.reload();
     }
   };
@@ -753,7 +796,7 @@ const Onboarding = () => {
             <DocumentUpload
               employeeId={userId}
               documentTitle="OPT Receipt"
-              documentType="OPTReceipt"
+              documentType="OPT Receipt"
               mode={status}
               isVisa={true}
             />
@@ -762,7 +805,7 @@ const Onboarding = () => {
           <DocumentUpload
             employeeId={userId}
             documentTitle="Profile Picture"
-            documentType="Profile"
+            documentType="Profile Picture"
             mode={status}
             isVisa={false}
           />
@@ -770,7 +813,7 @@ const Onboarding = () => {
           <DocumentUpload
             employeeId={userId}
             documentTitle="Driver’s License"
-            documentType="license"
+            documentType="Driver's License"
             mode={status}
             isVisa={false}
           />
@@ -778,7 +821,7 @@ const Onboarding = () => {
           <DocumentUpload
             employeeId={userId}
             documentTitle="Work Authorization"
-            documentType="authorization"
+            documentType="Work Authorization"
             mode={status}
             isVisa={false}
           />

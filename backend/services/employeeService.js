@@ -3,7 +3,6 @@ const User = require("../models/User");
 const Application = require("../models/Application");
 const VisaStatus = require("../models/visaStatus");
 
-//employeeService
 
 const createEmployee = async (employeeData, userId) => {
   const existingEmployee = await Employee.findOne({ userId });
@@ -12,9 +11,17 @@ const createEmployee = async (employeeData, userId) => {
     throw new Error("Employee profile already exists for this user");
   }
 
-  const { userId: _, isPermanentResident, greenCardStatus, otherVisaTitle, visaStartDate, visaEndDate, ...rest } = employeeData;
+  const {
+    userId: _,
+    isPermanentResident,
+    greenCardStatus,
+    otherVisaTitle,
+    visaStartDate,
+    visaEndDate,
+    ...rest
+  } = employeeData;
 
-  try{
+  try {
     const employee = await Employee.create({
       ...rest,
       isPermanentResident: isPermanentResident === "yes",
@@ -26,8 +33,26 @@ const createEmployee = async (employeeData, userId) => {
       onboardingStatus: "pending",
       userId,
     });
+
+    // 🔁 Create VisaStatus only for F1(CPT/OPT) non-permanent residents
+    if (
+      isPermanentResident === "no" &&
+      employeeData.visaType === "F1(CPT/OPT)"
+    ) {
+      await VisaStatus.create({
+        employeeId: employee._id,
+        isPermanentResident: false,
+        visaType: employeeData.visaType,
+        visaTitle: otherVisaTitle || "",
+        startDate: visaStartDate,
+        endDate: visaEndDate,
+        currentStep: "OPT Receipt",
+        documents: [],
+      });
+    }
+
     return employee;
-  }catch (error) {
+  } catch (error) {
     console.log("check 5 ", error.message);
     return undefined;
   }

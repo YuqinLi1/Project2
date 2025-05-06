@@ -45,8 +45,16 @@ const Management = () => {
   }, [dispatch]);
 
   const fetchDocuments = async (employeeId) => {
+    const token = localStorage.getItem("token");
     try {
-      const res = await axios.get(`http://localhost:5000/api/visa-status/employee/${employeeId}`);
+      const res = await axios.get(
+        `http://localhost:5000/api/visa-status/employee/${employeeId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const docs = res.data.data;
       const map = {};
       docs.forEach(doc => {
@@ -55,7 +63,7 @@ const Management = () => {
       setDocumentMap(map);
       resolveStatus(map);
     } catch (err) {
-      console.error('Error loading visa documents', err);
+      console.error("Error loading visa documents", err);
     }
   };
 
@@ -126,7 +134,6 @@ const Management = () => {
   return (
     <Container style={{ marginTop: '2em' }}>
       <Navigator />
-
       {currentState === 'unauthorized' ? (
         <Segment>
           <Message negative content="401 Unauthorized: Only F1-OPT employees can access this page." />

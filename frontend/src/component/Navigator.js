@@ -9,7 +9,7 @@ const Navigator = () => {
     <Menu pointing secondary>
       <Menu.Item
         name="Personal Information"
-        onClick={() => navigate('/information')}
+        onClick={() => navigate('/profile')}
       />
       <Menu.Item
         name="Visa Status"
