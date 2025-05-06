@@ -27,7 +27,6 @@ const Management = () => {
     if (!token) return;
 
     const decoded = jwtDecode(token);
-    const userId = decoded.id;
 
     axios.get(`http://localhost:5000/api/employee/me`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -147,17 +146,16 @@ const Management = () => {
               <List.Item key={doc}>
                 <strong>{doc}</strong>
                 {renderMessage(doc)}
-                {isUploadEnabled(doc) && (
-                  <Form>
-                    <DocumentUpload
-                      employeeId={employeeId}
-                      documentTitle={doc}
-                      documentType={doc}
-                      mode={currentState}
-                      isVisa={true}
-                    />
-                  </Form>
-                )}
+                <Form>
+                  <DocumentUpload
+                    employeeId={employeeId}
+                    documentTitle={doc}
+                    documentType={doc}
+                    mode={currentState}
+                    isVisa={true}
+                    fileName={documentMap[doc]?.fileName}
+                  />
+                </Form>
               </List.Item>
             ))}
           </List>

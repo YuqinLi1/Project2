@@ -111,15 +111,22 @@ const downloadVisaDocument = asyncHandler(async (req, res) => {
 });
 
 const previewVisaDocument = asyncHandler(async (req, res) => {
-  const { employeeId, type } = req.query;
-  await visaService.previewVisaDocument(employeeId, type, res);
-});
+  await visaService.previewVisaDocument(req, res);
+})
 
 const getVisaDocumentsByEmployee = asyncHandler(async (req, res) => {
   const employeeId = req.params.employeeId;
   const docs = await visaService.getVisaDocumentsByEmployeeId(employeeId);
   res.status(200).json({ success: true, data: docs });
 });
+
+const extractTokenFromQuery = (req, res, next) => {
+  const token = req.query.token;
+  if (token) {
+    req.headers.authorization = `Bearer ${token}`;
+  }
+  next();
+};
 
 
 module.exports = {
@@ -130,4 +137,5 @@ module.exports = {
   downloadVisaDocument,
   previewVisaDocument,
   getVisaDocumentsByEmployee,
+  extractTokenFromQuery,
 };
