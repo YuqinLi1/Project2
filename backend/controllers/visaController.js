@@ -32,7 +32,9 @@ const uploadVisaDocument = async (req, res) => {
     const employee = await employeeService.getEmployeeByUserId(req.user.id);
     if (!employee) {
       console.log("check 2: employee not found for user", req.user.id);
-      return res.status(404).json({ success: false, message: "Employee not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Employee not found" });
     }
 
     const document = await visaService.addVisaDocument(
@@ -71,17 +73,23 @@ const getEmployeesWithVisaInProgress = asyncHandler(async (req, res) => {
 const getVisaDocumentByType = asyncHandler(async (req, res) => {
   const { employeeId, type } = req.query;
   if (!employeeId || !type) {
-    return res.status(400).json({ success: false, message: "Missing employeeId or type" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Missing employeeId or type" });
   }
 
   const visaStatus = await visaService.getVisaStatus(employeeId);
   if (!visaStatus) {
-    return res.status(404).json({ success: false, message: "Visa status not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Visa status not found" });
   }
 
   const doc = visaStatus.documents.find((d) => d.type === type);
   if (!doc) {
-    return res.status(404).json({ success: false, message: "Document not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Document not found" });
   }
 
   res.status(200).json({ success: true, data: doc });
@@ -107,7 +115,6 @@ const sendVisaDocumentNotification = asyncHandler(async (req, res) => {
   });
 });
 
-
 const getAllVisaStatuses = asyncHandler(async (req, res) => {
   // Get all visa statuses
   const visaStatuses = await VisaStatus.find()
@@ -121,15 +128,15 @@ const getAllVisaStatuses = asyncHandler(async (req, res) => {
   });
 });
 
-
 const downloadVisaDocument = asyncHandler(async (req, res) => {
   const { employeeId, type } = req.query;
   await visaService.downloadVisaDocument(employeeId, type, res);
 });
 
 const previewVisaDocument = asyncHandler(async (req, res) => {
-  await visaService.previewVisaDocument(req, res);
-})
+  const { employeeId, type } = req.query;
+  await visaService.previewVisaDocument(employeeId, type, res);
+});
 
 const getVisaDocumentsByEmployee = asyncHandler(async (req, res) => {
   const employeeId = req.params.employeeId;

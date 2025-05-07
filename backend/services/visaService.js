@@ -1,4 +1,4 @@
-const VisaStatus = require('../models/visaStatus');
+const VisaStatus = require("../models/visaStatus");
 const Employee = require("../models/Employee");
 const fs = require("fs");
 const path = require("path");
@@ -79,15 +79,10 @@ const updateVisaStatus = async (id, status, feedback) => {
 
 const downloadVisaDocument = async (employeeId, type, res) => {
   const fileName = res.req.query.file;
-  console.log("Check 1", employeeId);
-  console.log("Check 2", type);
-  console.log("Check 3", fileName);
-
   const visaStatus = await VisaStatus.findOne(
     { employeeId },
     { documents: { $elemMatch: { type } } } // match by both type and filename
   );
-  console.log("Check 4", visaStatus);
 
   if (!visaStatus || !visaStatus.documents || visaStatus.documents.length === 0) {
     return res.status(404).json({ success: false, message: "Document not found" });
@@ -95,8 +90,6 @@ const downloadVisaDocument = async (employeeId, type, res) => {
 
   try{
     const document = visaStatus.documents[0]; // Because $elemMatch returns a single matching element
-
-    console.log("Check 5", document);
   
     const filePath = path.resolve(document.fileUrl);
     if (!fs.existsSync(filePath)) {
@@ -108,12 +101,13 @@ const downloadVisaDocument = async (employeeId, type, res) => {
   }
 };
 
-const previewVisaDocument = async (req, res) => {
+// In visaService.js
+const previewVisaDocument = async (employeeId, type, res) => {
   try {
-    const { employeeId, type } = req.query;
-
     if (!employeeId || !type) {
-      return res.status(400).json({ success: false, message: "Missing parameters" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing parameters" });
     }
 
     const visaStatus = await VisaStatus.findOne(
@@ -129,7 +123,9 @@ const previewVisaDocument = async (req, res) => {
 
     const filePath = path.resolve(doc.fileUrl);
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, message: "File not found on disk" });
+      return res
+        .status(404)
+        .json({ success: false, message: "File not found on disk" });
     }
 
     res.set("Content-Type", doc.mimeType || "application/octet-stream");
@@ -146,7 +142,7 @@ const getVisaDocumentsByEmployeeId = async (employeeId) => {
     throw new Error("Visa status not found");
   }
 
-  return visaStatus.documents.map(d => ({
+  return visaStatus.documents.map((d) => ({
     type: d.type,
     status: d.status,
     feedback: d.feedback || "",
