@@ -8,12 +8,17 @@ const DocumentUpload = ({
   documentType,
   mode,
   isVisa = false,
+  onFileChange,
 }) => {
   const [fileName, setFileName] = useState("");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFileName(file?.name || "");
+  
+    if (onFileChange) {
+      onFileChange(file);
+    }
   };
 
   const getEndpoint = (action) => {

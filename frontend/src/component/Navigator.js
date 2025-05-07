@@ -16,6 +16,10 @@ const Navigator = () => {
         onClick={() => navigate('/management')}
       />
       <Menu.Item
+        name="Application"
+        onClick={() => navigate('/onboarding')}
+      />
+      <Menu.Item
         name="Logout"
         onClick={() => {
           localStorage.removeItem('token'); 

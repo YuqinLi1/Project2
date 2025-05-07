@@ -46,7 +46,6 @@ const createEmployee = async (employeeData, userId) => {
         visaTitle: otherVisaTitle || "",
         startDate: visaStartDate,
         endDate: visaEndDate,
-        currentStep: "OPT Receipt",
         documents: [],
       });
     }
@@ -155,8 +154,6 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
           visaTitle: applicationData.visaTitle,
           startDate: applicationData.startDate,
           endDate: applicationData.endDate,
-          currentStep:
-            applicationData.visaType === "F1(CPT/OPT)" ? "OPT Receipt" : null,
           documents: [],
         });
       } else {
@@ -165,13 +162,6 @@ const submitOnboardingApplication = async (employeeId, applicationData) => {
         visaStatus.visaTitle = applicationData.visaTitle;
         visaStatus.startDate = applicationData.startDate;
         visaStatus.endDate = applicationData.endDate;
-
-        if (
-          applicationData.visaType === "F1(CPT/OPT)" &&
-          visaStatus.currentStep === null
-        ) {
-          visaStatus.currentStep = "OPT Receipt";
-        }
       }
 
       await visaStatus.save();
@@ -229,8 +219,7 @@ const reviewOnboardingApplication = async (
         const visaStatus = await VisaStatus.findOne({
           employeeId: employee._id,
         });
-        if (visaStatus && visaStatus.currentStep === "OPT Receipt") {
-          visaStatus.currentStep = "OPT EAD";
+        if (visaStatus) {
           await visaStatus.save();
         }
       }

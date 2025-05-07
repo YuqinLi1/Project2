@@ -53,12 +53,7 @@ const VisaStatusSchema = new mongoose.Schema(
         uploadDate: Date,
         reviewDate: Date,
       },
-    ],
-    currentStep: {
-      type: String,
-      enum: ["OPT Receipt", "OPT EAD", "I-983", "I-20", "Completed"],
-      default: "OPT Receipt",
-    },
+    ]
   },
   {
     timestamps: true,

@@ -25,12 +25,7 @@ const addVisaDocument = async (employeeId, documentType, fileInfo) => {
     throw new Error("Visa status not found");
   }
 
-  // Step 3: Enforce current step match (optional, can be removed if not needed)
-  if (visaStatus.currentStep !== documentType) {
-    throw new Error(`Cannot upload ${documentType} at this time. Current step is ${visaStatus.currentStep}`);
-  }
-
-  // Step 4: Push document directly to visaStatus.documents[]
+  // Step 3: Push document directly to visaStatus.documents[]
   visaStatus.documents.push({
     type: documentType,
     fileName: fileInfo.fileName,
@@ -83,23 +78,34 @@ const updateVisaStatus = async (id, status, feedback) => {
 };
 
 const downloadVisaDocument = async (employeeId, type, res) => {
-  const visaStatus = await VisaStatus.findOne({ employeeId });
+  const fileName = res.req.query.file;
+  console.log("Check 1", employeeId);
+  console.log("Check 2", type);
+  console.log("Check 3", fileName);
 
-  if (!visaStatus) {
-    return res.status(404).json({ success: false, message: "Visa status not found" });
-  }
+  const visaStatus = await VisaStatus.findOne(
+    { employeeId },
+    { documents: { $elemMatch: { type } } } // match by both type and filename
+  );
+  console.log("Check 4", visaStatus);
 
-  const document = visaStatus.documents.find(doc => doc.type === type);
-  if (!document) {
+  if (!visaStatus || !visaStatus.documents || visaStatus.documents.length === 0) {
     return res.status(404).json({ success: false, message: "Document not found" });
   }
 
-  const filePath = path.resolve(document.fileUrl);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ success: false, message: "File not found on disk" });
-  }
+  try{
+    const document = visaStatus.documents[0]; // Because $elemMatch returns a single matching element
 
-  res.download(filePath, document.fileName);
+    console.log("Check 5", document);
+  
+    const filePath = path.resolve(document.fileUrl);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: "File not found on disk" });
+    }
+    res.download(filePath, document.fileName);
+  } catch(error){
+    console.log("error ", e);
+  }
 };
 
 const previewVisaDocument = async (req, res) => {
@@ -110,15 +116,16 @@ const previewVisaDocument = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing parameters" });
     }
 
-    const visaStatus = await VisaStatus.findOne({ employeeId });
-    if (!visaStatus) {
-      return res.status(404).json({ success: false, message: "Visa status not found" });
-    }
+    const visaStatus = await VisaStatus.findOne(
+      { employeeId },
+      { documents: { $elemMatch: { type } } }
+    );
 
-    const doc = visaStatus.documents.find(d => d.type === type);
-    if (!doc) {
+    if (!visaStatus || !visaStatus.documents || visaStatus.documents.length === 0) {
       return res.status(404).json({ success: false, message: "Document not found" });
     }
+
+    const doc = visaStatus.documents[0];
 
     const filePath = path.resolve(doc.fileUrl);
     if (!fs.existsSync(filePath)) {
@@ -151,12 +158,25 @@ const getVisaDocumentsByEmployeeId = async (employeeId) => {
   }));
 };
 
-const getVisaStatus = async (employeeId) => {
+const getVisaStatus = async (employeeId) => {visaStatus.documents
   const visaStatus = await VisaStatus.findOne({ employeeId });
   if (!visaStatus) {
     throw new Error("Visa status not found");
   }
   return visaStatus;
+};
+
+const getVisaDocumentByEmployeeAndType = async (employeeId, type) => {
+  const visaStatus = await VisaStatus.findOne(
+    { employeeId },
+    { documents: { $elemMatch: { type } } }
+  );
+
+  if (!visaStatus || !visaStatus.documents || visaStatus.documents.length === 0) {
+    return null;
+  }
+
+  return visaStatus.documents[0];
 };
 
 module.exports = {
