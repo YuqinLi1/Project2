@@ -100,7 +100,6 @@ const VisaManagement = () => {
     }
   };
 
-  // Fetch all documents (or potentially separate calls for each status)
   const fetchAllVisaEmployees = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -135,57 +134,86 @@ const VisaManagement = () => {
         }
       );
 
-      // Combine all documents
-      if (
-        pendingResponse.data.success &&
-        approvedResponse.data.success &&
-        rejectedResponse.data.success &&
-        visaStatusResponse.data.success
-      ) {
+      // If we have visa statuses, we can display employees
+      if (visaStatusResponse.data.success) {
+        // Combine available documents
         const allDocuments = [
-          ...pendingResponse.data.data,
-          ...approvedResponse.data.data,
-          ...rejectedResponse.data.data,
+          ...(pendingResponse.data.success ? pendingResponse.data.data : []),
+          ...(approvedResponse.data.success ? approvedResponse.data.data : []),
+          ...(rejectedResponse.data.success ? rejectedResponse.data.data : []),
         ];
 
         // Create visa status map for quick lookup
         const visaStatusMap = {};
         visaStatusResponse.data.data.forEach((status) => {
           // Handle both string and object IDs
-          const id = status.employeeId._id || status.employeeId;
+          const id =
+            typeof status.employeeId === "object"
+              ? status.employeeId._id
+              : status.employeeId;
           visaStatusMap[id] = status;
-
-          // Also add a fallback entry with string version
-          if (typeof id === "object") {
-            visaStatusMap[id.toString()] = status;
-          }
         });
-        // Group documents by employee
-        const employeeMap = {};
-        allDocuments.forEach((doc) => {
-          if (!employeeMap[doc.employeeId._id]) {
-            // Get visa status info for this employee
-            const visaStatus = visaStatusMap[doc.employeeId._id];
 
-            employeeMap[doc.employeeId._id] = {
-              employeeId: doc.employeeId,
-              documents: [],
-              // Add visa status fields
-              visaType: visaStatus?.visaType || "N/A",
-              startDate: visaStatus?.startDate || null,
-              endDate: visaStatus?.endDate || null,
-              currentStep: visaStatus?.currentStep || "N/A",
-              isPermanentResident: visaStatus?.isPermanentResident || false,
+        let employees = [];
+
+        // If we have documents, group them by employee
+        if (allDocuments.length > 0) {
+          const employeeMap = {};
+          allDocuments.forEach((doc) => {
+            const employeeId =
+              typeof doc.employeeId === "object"
+                ? doc.employeeId._id
+                : doc.employeeId;
+
+            if (!employeeMap[employeeId]) {
+              // Get visa status info for this employee
+              const visaStatus = visaStatusMap[employeeId];
+
+              employeeMap[employeeId] = {
+                _id: employeeId,
+                employeeId: doc.employeeId,
+                documents: [],
+                // Add visa status fields
+                visaType: visaStatus?.visaType || "N/A",
+                startDate: visaStatus?.startDate || null,
+                endDate: visaStatus?.endDate || null,
+                currentStep: visaStatus?.currentStep || "N/A",
+                isPermanentResident: visaStatus?.isPermanentResident || false,
+              };
+            }
+            employeeMap[employeeId].documents.push(doc);
+          });
+
+          // Convert map to array
+          employees = Object.values(employeeMap);
+        }
+        // If no documents but visa statuses exist, create employee records from visa statuses
+        else if (visaStatusResponse.data.data.length > 0) {
+          employees = visaStatusResponse.data.data.map((status) => {
+            const employeeId =
+              typeof status.employeeId === "object"
+                ? status.employeeId._id
+                : status.employeeId;
+
+            return {
+              _id: employeeId,
+              employeeId: status.employeeId,
+              documents: [], // Empty documents array
+              visaType: status.visaType || "N/A",
+              startDate: status.startDate || null,
+              endDate: status.endDate || null,
+              currentStep: status.currentStep || "N/A",
+              isPermanentResident: status.isPermanentResident || false,
             };
-          }
-          employeeMap[doc.employeeId._id].documents.push(doc);
-        });
+          });
+        }
 
-        // Convert map to array
-        const employees = Object.values(employeeMap);
         setAllEmployees(employees);
+      } else {
+        setAllEmployees([]);
       }
     } catch (err) {
+      console.error("Error fetching visa data:", err);
       setError(
         err.response?.data?.message || "Error fetching all visa documents"
       );

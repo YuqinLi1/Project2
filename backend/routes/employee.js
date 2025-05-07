@@ -1,15 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/auth");
-const { 
+const {
   checkOwnership,
-  checkOnboardingStatus
+  checkOnboardingStatus,
 } = require("../middleware/roleCheck");
-const { 
+const {
   sanitizeBody,
   validateRequest,
   validateSSN,
-  validatePhoneNumber
+  validatePhoneNumber,
 } = require("../middleware/validation");
 const { check } = require("express-validator");
 
@@ -32,7 +32,6 @@ router.get("/me", getMyProfile);
 // Get onboarding status
 router.get("/status/:userId", getOnboardingStatus);
 
-// ✅ Get employee profile + documents by userId
 router.get("/profile/:userId", getEmployeeProfileWithDocuments);
 
 // Create employee profile
@@ -68,7 +67,9 @@ router.post(
     validateSSN,
     check("dateOfBirth", "Date of birth is required").not().isEmpty(),
     check("gender", "Gender is required").not().isEmpty(),
-    check("isPermanentResident", "Residency status is required").not().isEmpty(),
+    check("isPermanentResident", "Residency status is required")
+      .not()
+      .isEmpty(),
     check("currentAddress", "Current address is required").not().isEmpty(),
     check("currentAddress.street", "Street is required").not().isEmpty(),
     check("currentAddress.city", "City is required").not().isEmpty(),

@@ -19,6 +19,7 @@ const {
   reviewOnboardingApplication,
   resendRegistrationEmail,
   revokeRegistrationToken,
+  updateEmployeeOnboardingStatus,
 } = require("../controllers/hrController");
 
 // All routes require HR authentication
@@ -68,6 +69,21 @@ router.put(
     validateRequest,
   ],
   reviewOnboardingApplication
+);
+
+router.put(
+  "/onboarding/:id/status",
+  [
+    protect,
+    authorize("hr"),
+    sanitizeBody,
+    check("onboardingStatus", "Status is required").isIn([
+      "approved",
+      "rejected",
+    ]),
+    validateRequest,
+  ],
+  updateEmployeeOnboardingStatus
 );
 
 module.exports = router;

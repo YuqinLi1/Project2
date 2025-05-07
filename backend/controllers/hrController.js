@@ -173,29 +173,21 @@ const revokeRegistrationToken = asyncHandler(async (req, res) => {
 
 const getPendingOnboardingApplications = asyncHandler(async (req, res) => {
   try {
-    // List all unique status values in applications
-    const uniqueStatuses = await Application.distinct("status");
-    console.log("Unique application statuses:", uniqueStatuses);
-
-    // Get applications with pending status
-    const applications = await Application.find({ status: "pending" })
-      .populate({
-        path: "employeeId",
-        select:
-          "firstName lastName email ssn dateOfBirth gender contactInfo currentAddress isPermanentResident residencyType visaType startDate endDate",
-      })
-      .sort({ createdAt: 1 });
+    // Get employees with pending onboarding status directly
+    const employees = await Employee.find({ onboardingStatus: "pending" }).sort(
+      { lastName: 1, firstName: 1 }
+    );
 
     res.status(200).json({
       success: true,
-      count: applications.length,
-      data: applications,
+      count: employees.length,
+      data: employees,
     });
   } catch (error) {
-    console.error("Error fetching pending applications:", error);
+    console.error("Error fetching pending employees:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching pending applications",
+      message: "Error fetching pending employees",
       error: error.message,
     });
   }
@@ -337,6 +329,101 @@ const getApprovedOnboardingApplications = asyncHandler(async (req, res) => {
   }
 });
 
+const updateEmployeeOnboardingStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { onboardingStatus, onboardingFeedback } = req.body;
+
+  // Validate input
+  if (
+    !onboardingStatus ||
+    !["approved", "rejected"].includes(onboardingStatus)
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide valid status (approved/rejected)",
+    });
+  }
+
+  if (onboardingStatus === "rejected" && !onboardingFeedback) {
+    return res.status(400).json({
+      success: false,
+      message: "Feedback is required when rejecting an application",
+    });
+  }
+
+  try {
+    // Find the employee
+    const employee = await Employee.findById(id);
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+
+    // Update the onboarding status
+    employee.onboardingStatus = onboardingStatus;
+
+    // Add feedback if provided
+    if (onboardingFeedback) {
+      employee.onboardingFeedback = onboardingFeedback;
+    }
+
+    // Save the changes
+    await employee.save();
+
+    // Create an application record if one doesn't exist (optional)
+    const existingApplication = await Application.findOne({ employeeId: id });
+
+    if (!existingApplication) {
+      await Application.create({
+        employeeId: id,
+        status: onboardingStatus,
+        feedback: onboardingFeedback || "",
+      });
+    } else {
+      // Update existing application
+      existingApplication.status = onboardingStatus;
+      if (onboardingFeedback) {
+        existingApplication.feedback = onboardingFeedback;
+      }
+      await existingApplication.save();
+    }
+
+    // Send notification to employee (optional)
+    try {
+      const emailResult = await emailService.sendStatusUpdateEmail(
+        employee.email,
+        employee.firstName,
+        onboardingStatus,
+        onboardingFeedback
+      );
+    } catch (emailError) {
+      console.error("Error sending email notification:", emailError);
+      // Continue with the response even if email fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Employee onboarding status updated to ${onboardingStatus}`,
+      data: {
+        _id: employee._id,
+        firstName: employee.firstName,
+        lastName: employee.lastName,
+        onboardingStatus: employee.onboardingStatus,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating employee onboarding status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update employee onboarding status",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = {
   getAllEmployees,
   searchEmployees,
@@ -349,4 +436,5 @@ module.exports = {
   getRejectedOnboardingApplications,
   getApprovedOnboardingApplications,
   syncApplicationsWithEmployees,
+  updateEmployeeOnboardingStatus,
 };

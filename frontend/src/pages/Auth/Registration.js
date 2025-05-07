@@ -31,7 +31,7 @@ const Registration = () => {
     try {
       // Make API call to verify token
       const response = await axios.post(
-        "http://localhost:5000/api/token/verify",
+        "http://localhost:5000/api/auth/verify-token",
         { token: tokenValue }
       );
 
