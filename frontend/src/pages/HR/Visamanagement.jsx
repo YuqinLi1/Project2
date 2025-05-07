@@ -43,14 +43,14 @@ const VisaManagement = () => {
     fetchAllVisaEmployees();
   }, []);
 
-  // Fetch employees with visa status in progress
+  // Fetch pending visa documents
   const fetchInProgressEmployees = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        "http://localhost:5000/api/visa-status/in-progress",
+        "http://localhost:5000/api/documents/status/pending",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -72,54 +72,68 @@ const VisaManagement = () => {
     }
   };
 
-  // Fetch all employees with visa status
+  // Fetch all documents (or potentially separate calls for each status)
   const fetchAllVisaEmployees = async () => {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await axios.get(
-        "http://localhost:5000/api/visa-status/all",
+      // You might need multiple calls to get different statuses
+      const pendingResponse = await axios.get(
+        "http://localhost:5000/api/documents/status/pending",
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (response.data.success) {
-        setAllEmployees(response.data.data);
+      const approvedResponse = await axios.get(
+        "http://localhost:5000/api/documents/status/approved",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const rejectedResponse = await axios.get(
+        "http://localhost:5000/api/documents/status/rejected",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Combine all documents
+      if (
+        pendingResponse.data.success &&
+        approvedResponse.data.success &&
+        rejectedResponse.data.success
+      ) {
+        const allDocuments = [
+          ...pendingResponse.data.data,
+          ...approvedResponse.data.data,
+          ...rejectedResponse.data.data,
+        ];
+
+        // Group documents by employee
+        const employeeMap = {};
+        allDocuments.forEach((doc) => {
+          if (!employeeMap[doc.employeeId._id]) {
+            employeeMap[doc.employeeId._id] = {
+              employeeId: doc.employeeId,
+              documents: [],
+            };
+          }
+          employeeMap[doc.employeeId._id].documents.push(doc);
+        });
+
+        // Convert map to array
+        const employees = Object.values(employeeMap);
+        setAllEmployees(employees);
       }
     } catch (err) {
       setError(
-        err.response?.data?.message || "Error fetching all visa employees"
+        err.response?.data?.message || "Error fetching all visa documents"
       );
     }
   };
-
-  // Handle document preview
-  const handleDocumentPreview = (employee, document) => {
-    const token = localStorage.getItem("token");
-    window.open(
-      `http://localhost:5000/api/visa-status/preview?employeeId=${employee.employeeId._id}&type=${document.type}`,
-      "_blank"
-    );
-  };
-
-  const handleDocumentDownload = (employee, document) => {
-    const token = localStorage.getItem("token");
-    window.open(
-      `http://localhost:5000/api/visa-status/download?employeeId=${employee.employeeId._id}&type=${document.type}`,
-      "_blank"
-    );
-  };
-
-  // Open review modal
-  const handleOpenReviewModal = (employee, document) => {
-    setSelectedEmployee(employee);
-    setSelectedDocument(document);
-    setFeedback("");
-    setIsReviewModalOpen(true);
-  };
+  // Fetch all employees with visa status
 
   // Approve document
   const handleApproveDocument = async () => {
@@ -196,7 +210,7 @@ const VisaManagement = () => {
       const token = localStorage.getItem("token");
 
       const response = await axios.put(
-        `http://localhost:5000/api/visa-status/document/${selectedDocument._id}`,
+        `http://localhost:5000/api/documents/${selectedDocument._id}/status`,
         {
           status: "rejected",
           feedback,
@@ -318,27 +332,32 @@ const VisaManagement = () => {
   };
 
   // Get next step for employee
-  const getNextStep = (visaStatus) => {
-    const pendingDoc = visaStatus.documents.find(
+  const getNextStep = (employee) => {
+    // Check if the employee has documents property
+    if (!employee || !employee.documents) {
+      return "Unknown";
+    }
+
+    const pendingDoc = employee.documents.find(
       (doc) => doc.status === "pending"
     );
+
     if (pendingDoc) {
       return `Waiting for approval of ${pendingDoc.type}`;
     }
 
-    switch (visaStatus.currentStep) {
-      case "OPT Receipt":
-        return "Upload OPT Receipt";
-      case "OPT EAD":
-        return "Upload OPT EAD";
-      case "I-983":
-        return "Fill out and upload I-983";
-      case "I-20":
-        return "Upload I-20";
-      case "Completed":
-        return "All documents approved";
-      default:
-        return "Unknown";
+    const documentTypes = employee.documents.map((doc) => doc.type);
+
+    if (documentTypes.includes("OPT Receipt")) {
+      return "OPT Receipt is being processed";
+    } else if (documentTypes.includes("OPT EAD")) {
+      return "OPT EAD is being processed";
+    } else if (documentTypes.includes("I-983")) {
+      return "I-983 is being processed";
+    } else if (documentTypes.includes("I-20")) {
+      return "I-20 is being processed";
+    } else {
+      return "No documents in process";
     }
   };
 
@@ -404,7 +423,8 @@ const VisaManagement = () => {
                     </Table.Cell>
                     <Table.Cell>{getNextStep(employee)}</Table.Cell>
                     <Table.Cell>
-                      {employee.documents.some(
+                      {employee.documents &&
+                      employee.documents.some(
                         (doc) => doc.status === "pending"
                       ) ? (
                         <div>
@@ -419,9 +439,12 @@ const VisaManagement = () => {
                                   <Button
                                     primary
                                     onClick={() =>
-                                      handleDocumentPreview(
-                                        selectedEmployee,
-                                        selectedDocument
+                                      window.open(
+                                        `http://localhost:5000/api/documents/preview?employeeId=${
+                                          selectedEmployee.employeeId._id ||
+                                          selectedEmployee.employeeId
+                                        }&type=${encodeURIComponent(doc.type)}`,
+                                        "_blank"
                                       )
                                     }
                                   >
@@ -431,7 +454,13 @@ const VisaManagement = () => {
                                   <Button
                                     color="green"
                                     onClick={() =>
-                                      handleOpenReviewModal(employee, doc)
+                                      window.open(
+                                        `http://localhost:5000/api/documents/preview?employeeId=${
+                                          selectedEmployee.employeeId._id ||
+                                          selectedEmployee.employeeId
+                                        }&type=${encodeURIComponent(doc.type)}`,
+                                        "_blank"
+                                      )
                                     }
                                   >
                                     <Icon name="check" /> Review
@@ -511,9 +540,14 @@ const VisaManagement = () => {
                               <Button
                                 size="mini"
                                 onClick={() =>
-                                  handleDocumentPreview(
-                                    selectedEmployee,
-                                    selectedDocument
+                                  window.open(
+                                    `http://localhost:5000/api/documents/preview?employeeId=${
+                                      selectedEmployee.employeeId._id ||
+                                      selectedEmployee.employeeId
+                                    }&type=${encodeURIComponent(
+                                      selectedDocument.type
+                                    )}`,
+                                    "_blank"
                                   )
                                 }
                                 color={
@@ -605,7 +639,13 @@ const VisaManagement = () => {
                 <Button
                   primary
                   onClick={() =>
-                    handleDocumentDownload(selectedEmployee, selectedDocument)
+                    window.open(
+                      `http://localhost:5000/api/documents/download?employeeId=${
+                        selectedEmployee.employeeId._id ||
+                        selectedEmployee.employeeId
+                      }&type=${encodeURIComponent(selectedDocument.type)}`,
+                      "_blank"
+                    )
                   }
                 >
                   <Icon name="download" /> Download Document
@@ -644,14 +684,26 @@ const VisaManagement = () => {
                 <Button
                   primary
                   onClick={() =>
-                    handleDocumentPreview(selectedEmployee, selectedDocument)
+                    window.open(
+                      `http://localhost:5000/api/documents/preview?employeeId=${
+                        selectedEmployee.employeeId._id ||
+                        selectedEmployee.employeeId
+                      }&type=${encodeURIComponent(selectedDocument.type)}`,
+                      "_blank"
+                    )
                   }
                 >
                   <Icon name="eye" /> Preview Document
                 </Button>
                 <Button
                   onClick={() =>
-                    handleDocumentDownload(selectedEmployee, selectedDocument)
+                    window.open(
+                      `http://localhost:5000/api/documents/download?employeeId=${
+                        selectedEmployee.employeeId._id ||
+                        selectedEmployee.employeeId
+                      }&type=${encodeURIComponent(selectedDocument.type)}`,
+                      "_blank"
+                    )
                   }
                 >
                   <Icon name="download" /> Download
