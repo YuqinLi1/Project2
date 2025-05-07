@@ -34,7 +34,7 @@ router.post(
 );
 
 router.post(
-  "/token/verify",
+  "/verify-token",
   [
     sanitizeBody,
     check("token", "Token is required").not().isEmpty(),

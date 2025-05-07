@@ -4,7 +4,7 @@ const tokenService = require("../services/tokenService");
 const User = require("../models/User");
 
 const register = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, token } = req.body;
 
   // Validate input
   if (!username || !email || !password) {
@@ -13,10 +13,11 @@ const register = asyncHandler(async (req, res) => {
       message: "Please provide all required fields",
     });
   }
-  console.log("check 2");
 
+  // Token validation should be conditional (only if token is provided)
   if (token) {
     try {
+      // Validate token (if token service is implemented)
       const tokenDoc = await tokenService.validateRegistrationToken(token);
 
       // Check if the email from token matches the registration email
@@ -36,7 +37,8 @@ const register = asyncHandler(async (req, res) => {
       });
     }
   }
-  // Register user
+
+  // Continue with registration even if token is not provided
   const { user } = await authService.registerUser({
     username,
     email,
