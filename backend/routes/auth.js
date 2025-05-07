@@ -13,6 +13,7 @@ const {
   login,
   getMe,
   changePassword,
+  verifyToken,
 } = require("../controllers/authController");
 
 // Rate limit auth routes
@@ -30,6 +31,16 @@ router.post(
     validateRequest,
   ],
   register
+);
+
+router.post(
+  "/verify-token",
+  [
+    sanitizeBody,
+    check("token", "Token is required").not().isEmpty(),
+    validateRequest,
+  ],
+  verifyToken
 );
 
 // Login user

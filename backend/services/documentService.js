@@ -22,15 +22,13 @@ const getDocumentsByEmployeeId = async (employeeId) => {
   return await Document.find({
     employeeId: new mongoose.Types.ObjectId(employeeId),
     type: { $in: Profile_Types },
-  }).sort({ createdAt: -1 }); 
+  }).sort({ createdAt: -1 });
 };
 const getDocumentsByStatus = async (status) => {
   return await Document.find({ status })
-    .populate('employeeId', 'firstName lastName email')
+    .populate("employeeId", "firstName lastName email")
     .sort({ createdAt: -1 });
 };
-
-
 
 const saveUploadedDocument = async ({ employeeId, file, type }) => {
   if (!file) throw new Error("Missing file");
@@ -118,5 +116,5 @@ module.exports = {
   streamDownloadDocument,
   updateDocumentStatus,
   Profile_Types,
-  getDocumentsByStatus
+  getDocumentsByStatus,
 };

@@ -8,7 +8,9 @@ const Employee = require("../models/Employee");
 
 const getAllEmployees = asyncHandler(async (req, res) => {
   // Get all employees
-  const employees = await employeeService.getAllEmployees();
+  const employees = await Employee.find()
+    .populate("visaType")
+    .sort({ lastName: 1, firstName: 1 });
 
   res.status(200).json({
     success: true,
@@ -44,25 +46,39 @@ const generateRegistrationToken = asyncHandler(async (req, res) => {
   // Create token
   const tokenDoc = await tokenService.createRegistrationToken(email, name);
 
-  // Send email
-  await emailService.sendRegistrationEmail(
-    email,
-    name || "New Employee",
-    tokenDoc.token
-  );
+  try {
+    // Send email via Ethereal
+    const emailResult = await emailService.sendRegistrationEmail(
+      email,
+      name || "New Employee",
+      tokenDoc.token
+    );
 
-  res.status(201).json({
-    success: true,
-    message: "Registration token generated and email sent successfully",
-    data: {
-      _id: tokenDoc._id,
-      token: tokenDoc.token,
-      email: tokenDoc.email,
-      name: tokenDoc.name,
-      expiresAt: tokenDoc.expiresAt,
-      isUsed: tokenDoc.isUsed,
-    },
-  });
+    res.status(201).json({
+      success: true,
+      message: "Registration token generated and email sent successfully",
+      data: {
+        token: tokenDoc.token,
+        email: tokenDoc.email,
+        name: tokenDoc.name,
+        expiresAt: tokenDoc.expiresAt,
+      },
+      emailPreview: emailResult.previewUrl, // Include the preview URL in response
+    });
+  } catch (error) {
+    console.error("Error sending email:", error);
+
+    res.status(201).json({
+      success: true,
+      message: "Registration token generated but email could not be sent",
+      data: {
+        token: tokenDoc.token,
+        email: tokenDoc.email,
+        name: tokenDoc.name,
+        expiresAt: tokenDoc.expiresAt,
+      },
+    });
+  }
 });
 
 const getRegistrationTokens = asyncHandler(async (req, res) => {

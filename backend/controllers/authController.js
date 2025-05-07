@@ -4,7 +4,7 @@ const tokenService = require("../services/tokenService");
 const User = require("../models/User");
 
 const register = asyncHandler(async (req, res) => {
-  const { username, email, password} = req.body;
+  const { username, email, password, token } = req.body;
 
   // Validate input
   if (!username || !email || !password) {
@@ -13,12 +13,37 @@ const register = asyncHandler(async (req, res) => {
       message: "Please provide all required fields",
     });
   }
-  console.log("check 2");
 
-  // Register user
-  const { user} = await authService.registerUser(
-    { username, email, password },
-  );
+  // Token validation should be conditional (only if token is provided)
+  if (token) {
+    try {
+      // Validate token (if token service is implemented)
+      const tokenDoc = await tokenService.validateRegistrationToken(token);
+
+      // Check if the email from token matches the registration email
+      if (tokenDoc.email !== email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email doesn't match the registration token",
+        });
+      }
+
+      // Mark token as used
+      await tokenService.markTokenAsUsed(token);
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message || "Invalid or expired token",
+      });
+    }
+  }
+
+  // Continue with registration even if token is not provided
+  const { user } = await authService.registerUser({
+    username,
+    email,
+    password,
+  });
 
   res.status(201).json({
     success: true,
@@ -59,11 +84,6 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * @desc    Get current user profile
- * @route   GET /api/auth/me
- * @access  Private
- */
 const getMe = asyncHandler(async (req, res) => {
   const user = await authService.getUserById(req.user.id);
 
@@ -105,9 +125,36 @@ const changePassword = asyncHandler(async (req, res) => {
   });
 });
 
+const verifyToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: "Token is required",
+    });
+  }
+
+  try {
+    // Use your token service to verify the token
+    const tokenDoc = await tokenService.validateRegistrationToken(token);
+
+    res.status(200).json({
+      success: true,
+      email: tokenDoc.email,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.message || "Invalid or expired token",
+    });
+  }
+});
+
 module.exports = {
   register,
   login,
   getMe,
   changePassword,
+  verifyToken,
 };

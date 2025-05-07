@@ -1,69 +1,63 @@
+// services/emailService.js
 const nodemailer = require("nodemailer");
 const { registrationEmail } = require("../utils/emailTemplates");
 
-// Create a transporter based on environment
-const createTransporter = () => {
-  // For production
-  if (process.env.NODE_ENV === "production") {
-    return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      secure: process.env.EMAIL_SECURE === "true",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-  }
-  // For development - use ethereal for testing
-  else {
-    // For testing, you can create a test account at ethereal.email
-    // or just log the email content instead of actually sending it
-    return nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: {
-        user:
-          process.env.ETHEREAL_EMAIL ||
-          "your-ethereal-test-email@ethereal.email",
-        pass: process.env.ETHEREAL_PASSWORD || "your-ethereal-test-password",
-      },
-    });
-  }
+// Function to create a test account and transporter
+const createEtherealTransport = async () => {
+  // Create a test account on ethereal.email
+  const testAccount = await nodemailer.createTestAccount();
+
+  // Create a transporter using the test account
+  const transporter = nodemailer.createTransport({
+    host: "smtp.ethereal.email",
+    port: 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+
+  return { transporter, testAccount };
 };
 
 const sendRegistrationEmail = async (to, name, token) => {
-  const transporter = createTransporter();
+  try {
+    // Build registration URL
+    const baseURL = process.env.CLIENT_URL || "http://localhost:3000";
+    const registrationLink = `${baseURL}/register?token=${token}`;
 
-  // Build registration URL
-  const baseURL = process.env.CLIENT_URL || "http://localhost:3000";
-  const registrationLink = `${baseURL}/register?token=${token}`;
+    // Use your email template
+    const template = registrationEmail(name || "there", registrationLink);
 
-  // Use email template
-  const template = registrationEmail(name || "there", registrationLink);
+    // Create a test account and transporter
+    const { transporter, testAccount } = await createEtherealTransport();
 
-  // Email content
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || "hr@yourdomain.com",
-    to,
-    subject: template.subject,
-    html: template.html,
-  };
+    // Email content
+    const mailOptions = {
+      from: `"HR Department" <${testAccount.user}>`, // sender address
+      to: to, // list of receivers
+      subject: template.subject,
+      html: template.html,
+    };
 
-  // For development, log the email instead of sending
-  if (process.env.NODE_ENV !== "production") {
-    console.log("======= EMAIL CONTENT (DEV MODE) =======");
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${mailOptions.subject}`);
-    console.log("Body:", mailOptions.html);
-    console.log("Registration link:", registrationLink);
-    console.log("=======================================");
-    return { messageId: "dev-mode" };
+    // Send mail with defined transport object
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Message sent: %s", info.messageId);
+
+    // Preview URL - this is an actual URL you can visit to see the email
+    console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      previewUrl: nodemailer.getTestMessageUrl(info),
+    };
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw error;
   }
-
-  // Send the email in production
-  return await transporter.sendMail(mailOptions);
 };
 
 module.exports = {
