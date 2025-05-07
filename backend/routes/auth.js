@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/auth");
-const { authLimiter } = require("../middleware/rateLimit");
+
 const {
   validateRequest,
   sanitizeBody,
@@ -15,9 +15,6 @@ const {
   changePassword,
   verifyToken,
 } = require("../controllers/authController");
-
-// Rate limit auth routes
-router.use(authLimiter);
 
 // Register a new user
 router.post(

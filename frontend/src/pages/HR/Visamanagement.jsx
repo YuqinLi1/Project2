@@ -49,6 +49,14 @@ const VisaManagement = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
 
+      // Get visa status information first
+      const visaStatusResponse = await axios.get(
+        "http://localhost:5000/api/visa-status/all",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
       const response = await axios.get(
         "http://localhost:5000/api/documents/status/pending",
         {
@@ -58,8 +66,28 @@ const VisaManagement = () => {
         }
       );
 
-      if (response.data.success) {
-        setInProgressEmployees(response.data.data);
+      if (response.data.success && visaStatusResponse.data.success) {
+        // Create visa status map for quick lookup
+        const visaStatusMap = {};
+        visaStatusResponse.data.data.forEach((status) => {
+          visaStatusMap[status.employeeId._id] = status;
+        });
+
+        // Enhance document data with visa status information
+        const enhancedData = response.data.data.map((doc) => {
+          const employeeId = doc.employeeId._id;
+          const visaStatus = visaStatusMap[employeeId];
+
+          return {
+            ...doc,
+            visaType: visaStatus?.visaType || "N/A",
+            startDate: visaStatus?.startDate || null,
+            endDate: visaStatus?.endDate || null,
+            currentStep: visaStatus?.currentStep || "N/A",
+          };
+        });
+
+        setInProgressEmployees(enhancedData);
       }
 
       setLoading(false);
@@ -77,7 +105,15 @@ const VisaManagement = () => {
     try {
       const token = localStorage.getItem("token");
 
-      // You might need multiple calls to get different statuses
+      // Get visa status information first
+      const visaStatusResponse = await axios.get(
+        "http://localhost:5000/api/visa-status/all",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Then get documents by status
       const pendingResponse = await axios.get(
         "http://localhost:5000/api/documents/status/pending",
         {
@@ -103,7 +139,8 @@ const VisaManagement = () => {
       if (
         pendingResponse.data.success &&
         approvedResponse.data.success &&
-        rejectedResponse.data.success
+        rejectedResponse.data.success &&
+        visaStatusResponse.data.success
       ) {
         const allDocuments = [
           ...pendingResponse.data.data,
@@ -111,13 +148,34 @@ const VisaManagement = () => {
           ...rejectedResponse.data.data,
         ];
 
+        // Create visa status map for quick lookup
+        const visaStatusMap = {};
+        visaStatusResponse.data.data.forEach((status) => {
+          // Handle both string and object IDs
+          const id = status.employeeId._id || status.employeeId;
+          visaStatusMap[id] = status;
+
+          // Also add a fallback entry with string version
+          if (typeof id === "object") {
+            visaStatusMap[id.toString()] = status;
+          }
+        });
         // Group documents by employee
         const employeeMap = {};
         allDocuments.forEach((doc) => {
           if (!employeeMap[doc.employeeId._id]) {
+            // Get visa status info for this employee
+            const visaStatus = visaStatusMap[doc.employeeId._id];
+
             employeeMap[doc.employeeId._id] = {
               employeeId: doc.employeeId,
               documents: [],
+              // Add visa status fields
+              visaType: visaStatus?.visaType || "N/A",
+              startDate: visaStatus?.startDate || null,
+              endDate: visaStatus?.endDate || null,
+              currentStep: visaStatus?.currentStep || "N/A",
+              isPermanentResident: visaStatus?.isPermanentResident || false,
             };
           }
           employeeMap[doc.employeeId._id].documents.push(doc);
@@ -133,7 +191,6 @@ const VisaManagement = () => {
       );
     }
   };
-  // Fetch all employees with visa status
 
   // Approve document
   const handleApproveDocument = async () => {
@@ -260,7 +317,7 @@ const VisaManagement = () => {
       const token = localStorage.getItem("token");
 
       const response = await axios.post(
-        `http://localhost:5000/api/visa-status/notification/${employee.employeeId._id}`,
+        `http://localhost:5000/api/visa-status/notify/${employee.employeeId._id}`,
         {},
         {
           headers: {
@@ -333,32 +390,43 @@ const VisaManagement = () => {
 
   // Get next step for employee
   const getNextStep = (employee) => {
-    // Check if the employee has documents property
-    if (!employee || !employee.documents) {
-      return "Unknown";
+    // For documents from the pending documents API
+    if (!employee) return "Unknown";
+
+    // If this is a document object (like in In Progress tab)
+    if (employee.type && employee.status) {
+      return `Waiting for approval of ${employee.type}`;
     }
 
-    const pendingDoc = employee.documents.find(
-      (doc) => doc.status === "pending"
-    );
+    // For grouped employees with documents array (like in All Employees tab)
+    if (employee.documents) {
+      const pendingDoc = employee.documents.find(
+        (doc) => doc.status === "pending"
+      );
 
-    if (pendingDoc) {
-      return `Waiting for approval of ${pendingDoc.type}`;
+      if (pendingDoc) {
+        return `Waiting for approval of ${pendingDoc.type}`;
+      }
+
+      const documentTypes = employee.documents.map((doc) => doc.type);
+
+      if (documentTypes.includes("OPT Receipt")) {
+        return "OPT Receipt is being processed";
+      } else if (documentTypes.includes("OPT EAD")) {
+        return "OPT EAD is being processed";
+      } else if (documentTypes.includes("I-983")) {
+        return "I-983 is being processed";
+      } else if (documentTypes.includes("I-20")) {
+        return "I-20 is being processed";
+      }
     }
 
-    const documentTypes = employee.documents.map((doc) => doc.type);
-
-    if (documentTypes.includes("OPT Receipt")) {
-      return "OPT Receipt is being processed";
-    } else if (documentTypes.includes("OPT EAD")) {
-      return "OPT EAD is being processed";
-    } else if (documentTypes.includes("I-983")) {
-      return "I-983 is being processed";
-    } else if (documentTypes.includes("I-20")) {
-      return "I-20 is being processed";
-    } else {
-      return "No documents in process";
+    // If currentStep is available from visa status
+    if (employee.currentStep) {
+      return `Current step: ${employee.currentStep}`;
     }
+
+    return "No documents in process";
   };
 
   const panes = [
@@ -438,30 +506,30 @@ const VisaManagement = () => {
                                 <Button.Group size="small">
                                   <Button
                                     primary
-                                    onClick={() =>
+                                    onClick={() => {
+                                      setSelectedEmployee(employee);
+                                      setSelectedDocument(doc);
                                       window.open(
                                         `http://localhost:5000/api/documents/preview?employeeId=${
-                                          selectedEmployee.employeeId._id ||
-                                          selectedEmployee.employeeId
+                                          typeof employee.employeeId ===
+                                          "object"
+                                            ? employee.employeeId._id
+                                            : employee.employeeId
                                         }&type=${encodeURIComponent(doc.type)}`,
                                         "_blank"
-                                      )
-                                    }
+                                      );
+                                    }}
                                   >
                                     <Icon name="eye" /> View {doc.type}
                                   </Button>
                                   <Button.Or />
                                   <Button
                                     color="green"
-                                    onClick={() =>
-                                      window.open(
-                                        `http://localhost:5000/api/documents/preview?employeeId=${
-                                          selectedEmployee.employeeId._id ||
-                                          selectedEmployee.employeeId
-                                        }&type=${encodeURIComponent(doc.type)}`,
-                                        "_blank"
-                                      )
-                                    }
+                                    onClick={() => {
+                                      setSelectedEmployee(employee);
+                                      setSelectedDocument(doc);
+                                      setIsReviewModalOpen(true);
+                                    }}
                                   >
                                     <Icon name="check" /> Review
                                   </Button>
@@ -539,17 +607,19 @@ const VisaManagement = () => {
                             <div key={doc._id} style={{ marginBottom: "5px" }}>
                               <Button
                                 size="mini"
-                                onClick={() =>
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setSelectedDocument(doc);
                                   window.open(
                                     `http://localhost:5000/api/documents/preview?employeeId=${
-                                      selectedEmployee.employeeId._id ||
-                                      selectedEmployee.employeeId
-                                    }&type=${encodeURIComponent(
-                                      selectedDocument.type
-                                    )}`,
+                                      // Make sure we get the string ID, not the object
+                                      typeof employee.employeeId === "object"
+                                        ? employee.employeeId._id
+                                        : employee.employeeId
+                                    }&type=${encodeURIComponent(doc.type)}`,
                                     "_blank"
-                                  )
-                                }
+                                  );
+                                }}
                                 color={
                                   doc.status === "approved"
                                     ? "green"
