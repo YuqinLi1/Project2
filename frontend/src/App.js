@@ -61,6 +61,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/registration" element={<Registration />} />
       {/* Protected Routes for Both Roles */}
+      <Route path="/register" element={<Registration />} />
       <Route
         path="/dashboard"
         element={

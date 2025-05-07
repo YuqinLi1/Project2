@@ -150,9 +150,11 @@ const EmployeeProfiles = () => {
                 </Table.Cell>
                 <Table.Cell>{employee.ssn || "N/A"}</Table.Cell>
                 <Table.Cell>
-                  {employee.workAuthorizationType || "N/A"}
+                  {employee.visaType || employee.workAuthorization || "N/A"}
                 </Table.Cell>
-                <Table.Cell>{employee.cellPhone || "N/A"}</Table.Cell>
+                <Table.Cell>
+                  {employee.contactInfo?.cellPhone || "N/A"}
+                </Table.Cell>
                 <Table.Cell>{employee.email}</Table.Cell>
                 <Table.Cell>
                   <Button primary onClick={() => handleViewProfile(employee)}>

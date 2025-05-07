@@ -73,7 +73,6 @@ const RegistrationTokenTab = () => {
       if (response.data.success) {
         dispatch(
           addRegistrationToken({
-            _id: response.data.data._id,
             email: response.data.data.email,
             name: response.data.data.name,
             token: response.data.data.token,
@@ -84,6 +83,15 @@ const RegistrationTokenTab = () => {
         );
 
         setSuccess("Registration token generated and email sent successfully");
+
+        // If there's a preview URL, show it to the user
+        if (response.data.emailPreview) {
+          setSuccess(
+            `Registration token generated. To view the email, click this link: 
+            <a href="${response.data.emailPreview}" target="_blank">View Email</a>`
+          );
+        }
+
         setEmail("");
         setName("");
       }
@@ -93,36 +101,6 @@ const RegistrationTokenTab = () => {
       setError(
         err.response?.data?.message || "Error generating registration token"
       );
-      setLoading(false);
-    }
-  };
-
-  // Add ability to resend token email
-  const handleResendToken = async (tokenId) => {
-    try {
-      setLoading(true);
-      const authToken = localStorage.getItem("token");
-
-      const response = await axios.post(
-        `http://localhost:5000/api/hr/resend-token/${tokenId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setSuccess("Registration email resent successfully");
-        // Refresh token list
-        await fetchRegistrationTokens();
-      }
-
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.message || "Error resending token email");
       setLoading(false);
     }
   };
@@ -153,6 +131,44 @@ const RegistrationTokenTab = () => {
       setLoading(false);
     } catch (err) {
       setError(err.response?.data?.message || "Error revoking token");
+      setLoading(false);
+    }
+  };
+
+  const handleResendToken = async (tokenId) => {
+    try {
+      setLoading(true);
+      const authToken = localStorage.getItem("token");
+
+      const response = await axios.post(
+        `http://localhost:5000/api/hr/resend-token/${tokenId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setSuccess("Registration email resent successfully");
+
+        // If there's a preview URL in the response, show it
+        if (response.data.emailPreview) {
+          setSuccess(
+            `Email resent. To view the email, click this link: 
+            <a href="${response.data.emailPreview}" target="_blank">View Email</a>`
+          );
+        }
+
+        // Refresh token list
+        await fetchRegistrationTokens();
+      }
+
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error resending token email");
       setLoading(false);
     }
   };

@@ -1,6 +1,7 @@
 const Document = require("../models/Document");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 
 const Profile_Types = [
   "Profile Picture",
@@ -19,17 +20,15 @@ const getDocumentByEmployeeAndType = async (employeeId, type) => {
 const getDocumentsByEmployeeId = async (employeeId) => {
   // Updated to fetch all document types for the employee
   return await Document.find({
-    employeeId: mongoose.Types.ObjectId(employeeId),
+    employeeId,
     type: { $in: Profile_Types },
-  }).sort({ createdAt: -1 }); 
+  }).sort({ createdAt: -1 });
 };
 const getDocumentsByStatus = async (status) => {
   return await Document.find({ status })
-    .populate('employeeId', 'firstName lastName email')
+    .populate("employeeId", "firstName lastName email")
     .sort({ createdAt: -1 });
 };
-
-
 
 const saveUploadedDocument = async ({ employeeId, file, type }) => {
   if (!file) throw new Error("Missing file");
@@ -117,5 +116,5 @@ module.exports = {
   streamDownloadDocument,
   updateDocumentStatus,
   Profile_Types,
-  getDocumentsByStatus
+  getDocumentsByStatus,
 };
