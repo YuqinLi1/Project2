@@ -1,26 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Container, Header, Segment, List, Message, Button, Form
+  Container, Header, Segment, Grid, Message, Button, Form
 } from 'semantic-ui-react';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
-import { setVisaState, setVisaMessage } from '../slices/visaSlice';
+import { setVisaState, setVisaMessage, setVisaDocuments } from '../slices/visaSlice';
 import Navigator from '../component/Navigator';
 import { jwtDecode } from 'jwt-decode';
 import DocumentUpload from '../component/DocumentUpload';
 
-const documentTypes = [
-  'OPT Receipt',
-  'OPT EAD',
-  'I-983',
-  'I-20'
-];
+const documentTypes = ['OPT Receipt', 'OPT EAD', 'I-983', 'I-20'];
 
 const Management = () => {
   const dispatch = useDispatch();
   const { currentState, message } = useSelector(state => state.visa);
   const [employeeId, setEmployeeId] = useState(null);
   const [documentMap, setDocumentMap] = useState({});
+  const [uploadFiles, setUploadFiles] = useState({});
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -48,11 +44,7 @@ const Management = () => {
     try {
       const res = await axios.get(
         `http://localhost:5000/api/visa-status/employee/${employeeId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const docs = res.data.data;
       const map = {};
@@ -60,6 +52,7 @@ const Management = () => {
         map[doc.type] = doc;
       });
       setDocumentMap(map);
+      dispatch(setVisaDocuments(map));
       resolveStatus(map);
     } catch (err) {
       console.error("Error loading visa documents", err);
@@ -87,6 +80,39 @@ const Management = () => {
     if (i20 && i20.status === 'pending') return dispatch(setVisaState('I20Pending'));
     if (i20 && i20.status === 'approved') return dispatch(setVisaState('I20Approve'));
     if (i20 && i20.status === 'rejected') return dispatch(setVisaState('I20Rejected', i20.message || ''));
+  };
+
+  const getUploadMode = (type) => {
+    const doc = documentMap[type];
+    if (!doc) return 'never submit';
+    if (doc.status === 'pending') return 'pending';
+    if (doc.status === 'rejected') return 'rejected';
+    return 'approved';
+  };
+
+  const handleFileChange = (type, file) => {
+    setUploadFiles(prev => ({ ...prev, [type]: file }));
+  };
+
+  const handleSubmit = async (type) => {
+    const file = uploadFiles[type];
+    if (!file || !employeeId) return;
+    const formData = new FormData();
+    formData.append("document", file);
+    formData.append("documentType", type);
+
+    const token = localStorage.getItem("token");
+    try {
+      const res = await axios.post("http://localhost:5000/api/visa-status/document", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      fetchDocuments(employeeId);
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
   };
 
   const renderMessage = (docType) => {
@@ -120,16 +146,6 @@ const Management = () => {
     }
   };
 
-  const isUploadEnabled = (type) => {
-    const map = {
-      'OPT Receipt': ['RecepitApprove', 'RecepitRejected', 'RecepitPending'],
-      'OPT EAD': ['RecepitApprove', 'EADRejected'],
-      'I-983': ['EADApprove', 'I983Rejected'],
-      'I-20': ['I983Approve', 'I20Rejected'],
-    };
-    return map[type]?.includes(currentState);
-  };
-
   return (
     <Container style={{ marginTop: '2em' }}>
       <Navigator />
@@ -141,24 +157,56 @@ const Management = () => {
       ) : (
         <Segment>
           <Header as="h3">Upload visa documents</Header>
-          <List ordered>
+          <Grid divided="vertically">
             {documentTypes.map(doc => (
-              <List.Item key={doc}>
-                <strong>{doc}</strong>
-                {renderMessage(doc)}
-                <Form>
-                  <DocumentUpload
-                    employeeId={employeeId}
-                    documentTitle={doc}
-                    documentType={doc}
-                    mode={currentState}
-                    isVisa={true}
-                    fileName={documentMap[doc]?.fileName}
-                  />
-                </Form>
-              </List.Item>
+              <Grid.Row key={doc} columns={2}>
+                <Grid.Column width={10}>
+                  <Header as="h4">{doc}</Header>
+                  {renderMessage(doc)}
+                  <Form>
+                    <DocumentUpload
+                      employeeId={employeeId}
+                      documentTitle={doc}
+                      documentType={doc}
+                      mode={getUploadMode(doc)}
+                      isVisa={true}
+                      fileName={documentMap[doc]?.fileName}
+                      onFileChange={(file) => handleFileChange(doc, file)}
+                    />
+                    {uploadFiles[doc] && (
+                      <Button primary onClick={() => handleSubmit(doc)}>
+                        Submit
+                      </Button>
+                    )}
+                  </Form>
+                </Grid.Column>
+
+                {doc === 'I-983' && ['I983Approve', 'I983Rejected', 'EADApprove'].includes(currentState) && (
+                  <Grid.Column width={6}>
+                    <Header as="h5">Download Sample I-983</Header>
+                    <Button
+                      content="sampleI983.pdf"
+                      onClick={() =>
+                        window.open(
+                          `http://localhost:5000/api/visa-status/download?employeeId=${employeeId}&type=Sample&file=sampleI983.pdf`,
+                          '_blank'
+                        )
+                      }
+                    />
+                    <Button
+                      content="emptyI983.pdf"
+                      onClick={() =>
+                        window.open(
+                          `http://localhost:5000/api/visa-status/download?employeeId=${employeeId}&type=Sample&file=emptyI983.pdf`,
+                          '_blank'
+                        )
+                      }
+                    />
+                  </Grid.Column>
+                )}
+              </Grid.Row>
             ))}
-          </List>
+          </Grid>
         </Segment>
       )}
     </Container>

@@ -38,7 +38,7 @@ const VisaStatusSchema = new mongoose.Schema(
       {
         type: {
           type: String,
-          enum: ["OPT Receipt", "OPT EAD", "I-983", "I-20"],
+          enum: ["OPT Receipt", "OPT EAD", "I-983", "I-20", "Sample"],
         },
         fileName: String,
         fileUrl: String,

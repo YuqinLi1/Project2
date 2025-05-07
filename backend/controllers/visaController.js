@@ -28,8 +28,6 @@ const uploadVisaDocument = async (req, res) => {
     });
   }
 
-  console.log("check 1 ", documentType);
-
   try {
     const employee = await employeeService.getEmployeeByUserId(req.user.id);
     if (!employee) {
@@ -68,6 +66,25 @@ const getEmployeesWithVisaInProgress = asyncHandler(async (req, res) => {
     count: employees.length,
     data: employees,
   });
+});
+
+const getVisaDocumentByType = asyncHandler(async (req, res) => {
+  const { employeeId, type } = req.query;
+  if (!employeeId || !type) {
+    return res.status(400).json({ success: false, message: "Missing employeeId or type" });
+  }
+
+  const visaStatus = await visaService.getVisaStatus(employeeId);
+  if (!visaStatus) {
+    return res.status(404).json({ success: false, message: "Visa status not found" });
+  }
+
+  const doc = visaStatus.documents.find((d) => d.type === type);
+  if (!doc) {
+    return res.status(404).json({ success: false, message: "Document not found" });
+  }
+
+  res.status(200).json({ success: true, data: doc });
 });
 
 const sendVisaDocumentNotification = asyncHandler(async (req, res) => {
@@ -120,15 +137,6 @@ const getVisaDocumentsByEmployee = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: docs });
 });
 
-const extractTokenFromQuery = (req, res, next) => {
-  const token = req.query.token;
-  if (token) {
-    req.headers.authorization = `Bearer ${token}`;
-  }
-  next();
-};
-
-
 module.exports = {
   uploadVisaDocument,
   getEmployeesWithVisaInProgress,
@@ -137,5 +145,5 @@ module.exports = {
   downloadVisaDocument,
   previewVisaDocument,
   getVisaDocumentsByEmployee,
-  extractTokenFromQuery,
+  getVisaDocumentByType,
 };

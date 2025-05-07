@@ -1,6 +1,7 @@
 const Document = require("../models/Document");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 
 const Profile_Types = [
   "Profile Picture",
@@ -19,7 +20,7 @@ const getDocumentByEmployeeAndType = async (employeeId, type) => {
 const getDocumentsByEmployeeId = async (employeeId) => {
   // Updated to fetch all document types for the employee
   return await Document.find({
-    employeeId: mongoose.Types.ObjectId(employeeId),
+    employeeId: new mongoose.Types.ObjectId(employeeId),
     type: { $in: Profile_Types },
   }).sort({ createdAt: -1 }); 
 };

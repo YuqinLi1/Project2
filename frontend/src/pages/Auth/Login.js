@@ -29,7 +29,7 @@ const Login = () => {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("userRole", decoded.role);
 
-        navigate("/dashboard");
+        navigate("/onboarding");
       } else {
         setError("Error, please check username and password");
       }

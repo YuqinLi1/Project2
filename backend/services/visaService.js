@@ -151,6 +151,14 @@ const getVisaDocumentsByEmployeeId = async (employeeId) => {
   }));
 };
 
+const getVisaStatus = async (employeeId) => {
+  const visaStatus = await VisaStatus.findOne({ employeeId });
+  if (!visaStatus) {
+    throw new Error("Visa status not found");
+  }
+  return visaStatus;
+};
+
 module.exports = {
   getEmployeesWithOPTVisaStatus,
   addVisaDocument,
@@ -160,4 +168,5 @@ module.exports = {
   downloadVisaDocument,
   previewVisaDocument,
   getVisaDocumentsByEmployeeId,
+  getVisaStatus,
 };

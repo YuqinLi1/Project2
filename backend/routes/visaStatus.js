@@ -13,7 +13,7 @@ const {
   previewVisaDocument,
   uploadVisaDocument,
   getVisaDocumentsByEmployee,
-  extractTokenFromQuery,
+  getVisaDocumentByType,
 } = require("../controllers/visaController");
 
 // All routes require authentication
@@ -45,5 +45,6 @@ router.post(
 router.get("/download", downloadVisaDocument);
 router.get("/preview", previewVisaDocument);
 router.get('/employee/:employeeId', getVisaDocumentsByEmployee);
+router.get('/document/type', getVisaDocumentByType);
 
 module.exports = router;

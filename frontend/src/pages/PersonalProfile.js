@@ -27,7 +27,7 @@ const getValue = (obj, path) => {
 const formatDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
-  return date.toISOString().split('T')[0]; // YYYY-MM-DD
+  return date.toISOString().split('T')[0];
 };
 
 const PersonalProfile = () => {
@@ -272,7 +272,6 @@ const PersonalProfile = () => {
         <Header as="h4">Upload Documents</Header>
         {renderDocumentField("Driver's License", "Driver's License", setDriverLicenseFile)}
         {renderDocumentField("Work Authorization", "Work Authorization", setWorkAuthFile)}
-
         <Divider />
       </Segment>
 
