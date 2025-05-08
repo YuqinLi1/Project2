@@ -21,7 +21,10 @@ const getOnboardingStatus = asyncHandler(async (req, res) => {
     return res.status(200).json({ status: "never submit" });
   }
 
-  return res.status(200).json({ status: employee.onboardingStatus });
+  return res.status(200).json({ 
+    status: employee.onboardingStatus,
+    feedback: employee.onboardingFeedback || "",
+  });
 });
 
 const getEmployeeProfileWithDocuments = asyncHandler(async (req, res) => {

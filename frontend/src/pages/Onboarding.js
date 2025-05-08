@@ -130,12 +130,14 @@ const Onboarding = () => {
           setReadOnly(true);
           fetchProfile(token, userIdFromToken); 
         } else if (status === "rejected") {
-          setAlertMessage(
-            "Your application was rejected. Please review and resubmit."
-          );
+          setAlertMessage('Your application was rejected. '+res.data.feedback);
           setReadOnly(false);
           fetchProfile(token, userIdFromToken); 
-        }
+        }else if (status === "approved") {
+          setAlertMessage("Your appication has been approved");
+          setReadOnly(true);
+          fetchProfile(token, userIdFromToken); 
+        } 
       })
       .catch(() => {
         setUnauthorized(true);
