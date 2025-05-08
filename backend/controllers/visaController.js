@@ -4,6 +4,7 @@ const emailService = require("../services/emailService");
 const VisaStatus = require("../models/visaStatus");
 const asyncHandler = require("express-async-handler");
 const e = require("express");
+const Employee = require("../models/Employee");
 
 const updateVisaStatus = asyncHandler(async (req, res) => {
   const { status, feedback } = req.body;
@@ -94,27 +95,58 @@ const getVisaDocumentByType = asyncHandler(async (req, res) => {
 
   res.status(200).json({ success: true, data: doc });
 });
-
 const sendVisaDocumentNotification = asyncHandler(async (req, res) => {
-  // Get employee
-  const employee = await employeeService.getEmployeeById(req.params.id);
+  try {
+    // Get employee with all visa information
+    const employee = await Employee.findById(req.params.id);
 
-  // Get visa status
-  const visaStatus = await visaService.getVisaStatus(req.params.id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
 
-  // Send notification
-  await emailService.sendVisaDocumentNotification(
-    employee.email,
-    `${employee.firstName} ${employee.lastName}`,
-    visaStatus.currentStep
-  );
+    // Determine current step based on visa type
+    let currentStep = "document";
 
-  res.status(200).json({
-    success: true,
-    message: "Notification sent successfully",
-  });
+    if (employee.visaType === "F1(CPT/OPT)") {
+      // Default to OPT Receipt if no other information is available
+      currentStep = "OPT Receipt";
+
+      // Check if the employee has a visa status record
+      try {
+        const visaStatus = await VisaStatus.findOne({
+          employeeId: employee._id,
+        });
+        if (visaStatus && visaStatus.currentStep) {
+          currentStep = visaStatus.currentStep;
+        }
+      } catch (error) {
+        console.log("Visa status not found, using default step");
+      }
+    }
+
+    // Send notification
+    await emailService.sendVisaDocumentNotification(
+      employee.email,
+      `${employee.firstName} ${employee.lastName}`,
+      currentStep
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Notification sent successfully",
+    });
+  } catch (error) {
+    console.error("Error sending notification:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error sending notification",
+      error: error.message,
+    });
+  }
 });
-
 const getAllVisaStatuses = asyncHandler(async (req, res) => {
   // Get all visa statuses
   const visaStatuses = await VisaStatus.find()
@@ -143,6 +175,61 @@ const getVisaDocumentsByEmployee = asyncHandler(async (req, res) => {
   const docs = await visaService.getVisaDocumentsByEmployeeId(employeeId);
   res.status(200).json({ success: true, data: docs });
 });
+const updateVisaDocumentStatus = asyncHandler(async (req, res) => {
+  try {
+    const { id, docId } = req.params;
+    const { status, feedback } = req.body;
+
+    // Find visa status
+    const visaStatus = await VisaStatus.findById(id);
+
+    if (!visaStatus) {
+      return res.status(404).json({
+        success: false,
+        message: "Visa status not found",
+      });
+    }
+
+    // Find the document in the documents array
+    const docIndex = visaStatus.documents.findIndex(
+      (doc) => doc._id.toString() === docId
+    );
+
+    if (docIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found in visa status",
+      });
+    }
+
+    // Update the document status
+    visaStatus.documents[docIndex].status = status;
+
+    // Add feedback if provided
+    if (feedback) {
+      visaStatus.documents[docIndex].feedback = feedback;
+    }
+
+    // Update review date
+    visaStatus.documents[docIndex].reviewDate = new Date();
+
+    // Save changes
+    await visaStatus.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Document status updated to ${status}`,
+      data: visaStatus.documents[docIndex],
+    });
+  } catch (error) {
+    console.error("Error updating document status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating document status",
+      error: error.message,
+    });
+  }
+});
 
 module.exports = {
   uploadVisaDocument,
@@ -153,4 +240,5 @@ module.exports = {
   previewVisaDocument,
   getVisaDocumentsByEmployee,
   getVisaDocumentByType,
+  updateVisaDocumentStatus,
 };

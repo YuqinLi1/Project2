@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
   Header,
@@ -14,9 +14,11 @@ import {
   Menu,
 } from "semantic-ui-react";
 import axios from "axios";
+import NavigationMenu from "../component/NavigationMenu";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ const Dashboard = () => {
     pendingApplications: 0,
     totalEmployees: 0,
     visaExpiringSoon: 0,
-    onboardingStatus: "never submit", // Add this to track employee's onboarding status
+    onboardingStatus: "never submit",
   });
   const [activeTab, setActiveTab] = useState(0);
 
@@ -245,73 +247,6 @@ const Dashboard = () => {
     }
   };
 
-  // Navigation helper
-  const handleNavigate = (path) => {
-    navigate(path);
-  };
-
-  // Main navigation component
-  const NavigationMenu = () => (
-    <Menu pointing secondary>
-      <Menu.Item header>Employee Portal</Menu.Item>
-
-      {userRole === "hr" ? (
-        // HR Navigation Items
-        <>
-          <Menu.Item
-            name="Dashboard"
-            active
-            onClick={() => handleNavigate("/dashboard")}
-          />
-          <Menu.Item
-            name="Employee Profiles"
-            onClick={() => handleNavigate("/profiles")}
-          />
-          <Menu.Item
-            name="Visa Management"
-            onClick={() => handleNavigate("/visa-management")}
-          />
-          <Menu.Item
-            name="Hiring Management"
-            onClick={() => handleNavigate("/hiring-management")}
-          />
-        </>
-      ) : (
-        // Employee Navigation Items
-        <>
-          <Menu.Item
-            name="Dashboard"
-            active
-            onClick={() => handleNavigate("/dashboard")}
-          />
-          <Menu.Item
-            name="Onboarding"
-            onClick={() => handleNavigate("/onboarding")}
-          />
-          <Menu.Item
-            name="Personal Information"
-            onClick={() => handleNavigate("/profile")}
-          />
-          <Menu.Item
-            name="Visa Status"
-            onClick={() => handleNavigate("/management")}
-          />
-        </>
-      )}
-
-      <Menu.Menu position="right">
-        <Menu.Item
-          name="Logout"
-          onClick={() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("userRole");
-            handleNavigate("/login");
-          }}
-        />
-      </Menu.Menu>
-    </Menu>
-  );
-
   if (loading) {
     return (
       <Container style={{ marginTop: "2em" }}>
@@ -324,7 +259,7 @@ const Dashboard = () => {
 
   return (
     <Container style={{ marginTop: "2em" }}>
-      <NavigationMenu />
+      <NavigationMenu userRole={userRole} activePath={location.pathname} />
 
       <Header as="h1" dividing>
         Welcome to the Employee Portal, {userName}!

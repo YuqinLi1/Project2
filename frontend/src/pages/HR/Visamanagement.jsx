@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
   Container,
   Header,
@@ -15,10 +16,13 @@ import {
   Divider,
 } from "semantic-ui-react";
 import axios from "axios";
+import NavigationMenu from "../../component/NavigationMenu";
 import { setVisaState, setVisaMessage } from "../../slices/visaSlice";
 
 const VisaManagement = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const [userRole, setUserRole] = useState("hr");
   const { currentState, message } = useSelector((state) => state.visa);
 
   // State for employees with visa status in progress
@@ -41,6 +45,10 @@ const VisaManagement = () => {
   useEffect(() => {
     fetchInProgressEmployees();
     fetchAllVisaEmployees();
+    const role = localStorage.getItem("userRole");
+    if (role) {
+      setUserRole(role);
+    }
   }, []);
 
   // Fetch pending visa documents
@@ -73,21 +81,34 @@ const VisaManagement = () => {
           visaStatusMap[status.employeeId._id] = status;
         });
 
-        // Enhance document data with visa status information
-        const enhancedData = response.data.data.map((doc) => {
-          const employeeId = doc.employeeId._id;
-          const visaStatus = visaStatusMap[employeeId];
+        // Group documents by employee ID to prevent duplicates
+        const employeeMap = {};
 
-          return {
-            ...doc,
-            visaType: visaStatus?.visaType || "N/A",
-            startDate: visaStatus?.startDate || null,
-            endDate: visaStatus?.endDate || null,
-            currentStep: visaStatus?.currentStep || "N/A",
-          };
+        response.data.data.forEach((doc) => {
+          const employeeId = doc.employeeId._id;
+
+          if (!employeeMap[employeeId]) {
+            const visaStatus = visaStatusMap[employeeId];
+
+            employeeMap[employeeId] = {
+              _id: employeeId,
+              employeeId: doc.employeeId,
+              documents: [],
+              visaType: visaStatus?.visaType || "N/A",
+              startDate: visaStatus?.startDate || null,
+              endDate: visaStatus?.endDate || null,
+              currentStep: visaStatus?.currentStep || "N/A",
+            };
+          }
+
+          // Add this document to the employee's documents array
+          employeeMap[employeeId].documents.push(doc);
         });
 
-        setInProgressEmployees(enhancedData);
+        // Convert map to array
+        const uniqueEmployees = Object.values(employeeMap);
+
+        setInProgressEmployees(uniqueEmployees);
       }
 
       setLoading(false);
@@ -104,7 +125,7 @@ const VisaManagement = () => {
     try {
       const token = localStorage.getItem("token");
 
-      // Get visa status information first
+      // Get all visa statuses (this already includes documents from visaStatus collection)
       const visaStatusResponse = await axios.get(
         "http://localhost:5000/api/visa-status/all",
         {
@@ -112,101 +133,26 @@ const VisaManagement = () => {
         }
       );
 
-      // Then get documents by status
-      const pendingResponse = await axios.get(
-        "http://localhost:5000/api/documents/status/pending",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const approvedResponse = await axios.get(
-        "http://localhost:5000/api/documents/status/approved",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const rejectedResponse = await axios.get(
-        "http://localhost:5000/api/documents/status/rejected",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      // If we have visa statuses, we can display employees
       if (visaStatusResponse.data.success) {
-        // Combine available documents
-        const allDocuments = [
-          ...(pendingResponse.data.success ? pendingResponse.data.data : []),
-          ...(approvedResponse.data.success ? approvedResponse.data.data : []),
-          ...(rejectedResponse.data.success ? rejectedResponse.data.data : []),
-        ];
-
-        // Create visa status map for quick lookup
-        const visaStatusMap = {};
-        visaStatusResponse.data.data.forEach((status) => {
-          // Handle both string and object IDs
-          const id =
+        // Process the visa status data directly
+        const employees = visaStatusResponse.data.data.map((status) => {
+          const employeeId =
             typeof status.employeeId === "object"
               ? status.employeeId._id
               : status.employeeId;
-          visaStatusMap[id] = status;
+
+          // Return a properly formatted employee object with documents from visa status
+          return {
+            _id: employeeId,
+            employeeId: status.employeeId,
+            documents: status.documents || [], // Use documents directly from visa status
+            visaType: status.visaType || "N/A",
+            startDate: status.startDate || null,
+            endDate: status.endDate || null,
+            currentStep: status.currentStep || "N/A",
+            isPermanentResident: status.isPermanentResident || false,
+          };
         });
-
-        let employees = [];
-
-        // If we have documents, group them by employee
-        if (allDocuments.length > 0) {
-          const employeeMap = {};
-          allDocuments.forEach((doc) => {
-            const employeeId =
-              typeof doc.employeeId === "object"
-                ? doc.employeeId._id
-                : doc.employeeId;
-
-            if (!employeeMap[employeeId]) {
-              // Get visa status info for this employee
-              const visaStatus = visaStatusMap[employeeId];
-
-              employeeMap[employeeId] = {
-                _id: employeeId,
-                employeeId: doc.employeeId,
-                documents: [],
-                // Add visa status fields
-                visaType: visaStatus?.visaType || "N/A",
-                startDate: visaStatus?.startDate || null,
-                endDate: visaStatus?.endDate || null,
-                currentStep: visaStatus?.currentStep || "N/A",
-                isPermanentResident: visaStatus?.isPermanentResident || false,
-              };
-            }
-            employeeMap[employeeId].documents.push(doc);
-          });
-
-          // Convert map to array
-          employees = Object.values(employeeMap);
-        }
-        // If no documents but visa statuses exist, create employee records from visa statuses
-        else if (visaStatusResponse.data.data.length > 0) {
-          employees = visaStatusResponse.data.data.map((status) => {
-            const employeeId =
-              typeof status.employeeId === "object"
-                ? status.employeeId._id
-                : status.employeeId;
-
-            return {
-              _id: employeeId,
-              employeeId: status.employeeId,
-              documents: [], // Empty documents array
-              visaType: status.visaType || "N/A",
-              startDate: status.startDate || null,
-              endDate: status.endDate || null,
-              currentStep: status.currentStep || "N/A",
-              isPermanentResident: status.isPermanentResident || false,
-            };
-          });
-        }
 
         setAllEmployees(employees);
       } else {
@@ -215,7 +161,7 @@ const VisaManagement = () => {
     } catch (err) {
       console.error("Error fetching visa data:", err);
       setError(
-        err.response?.data?.message || "Error fetching all visa documents"
+        err.response?.data?.message || "Error fetching visa status information"
       );
     }
   };
@@ -418,43 +364,41 @@ const VisaManagement = () => {
 
   // Get next step for employee
   const getNextStep = (employee) => {
-    // For documents from the pending documents API
-    if (!employee) return "Unknown";
+    if (!employee || !employee.currentStep) return "";
 
-    // If this is a document object (like in In Progress tab)
-    if (employee.type && employee.status) {
-      return `Waiting for approval of ${employee.type}`;
+    // Find relevant document
+    const relevantDocument = employee.documents?.find(
+      (doc) => doc.type === employee.currentStep
+    );
+
+    if (!relevantDocument) {
+      // No document for current step
+      return `Employee needs to upload ${employee.currentStep}`;
     }
 
-    // For grouped employees with documents array (like in All Employees tab)
-    if (employee.documents) {
-      const pendingDoc = employee.documents.find(
-        (doc) => doc.status === "pending"
-      );
-
-      if (pendingDoc) {
-        return `Waiting for approval of ${pendingDoc.type}`;
-      }
-
-      const documentTypes = employee.documents.map((doc) => doc.type);
-
-      if (documentTypes.includes("OPT Receipt")) {
-        return "OPT Receipt is being processed";
-      } else if (documentTypes.includes("OPT EAD")) {
-        return "OPT EAD is being processed";
-      } else if (documentTypes.includes("I-983")) {
-        return "I-983 is being processed";
-      } else if (documentTypes.includes("I-20")) {
-        return "I-20 is being processed";
-      }
+    // Based on document status
+    switch (relevantDocument.status) {
+      case "pending":
+        return `Waiting for HR to approve ${employee.currentStep}`;
+      case "approved":
+        // Return next step message based on what was just approved
+        switch (employee.currentStep) {
+          case "OPT Receipt":
+            return "Please upload a copy of your OPT EAD";
+          case "OPT EAD":
+            return "Please download and fill out the I-983 form";
+          case "I-983":
+            return "Please send the I-983 along with necessary documents to your school and upload the new I-20";
+          case "I-20":
+            return "All documents have been approved";
+          default:
+            return "Next step undefined";
+        }
+      case "rejected":
+        return `${employee.currentStep} was rejected. Please see feedback and resubmit.`;
+      default:
+        return "Status undefined";
     }
-
-    // If currentStep is available from visa status
-    if (employee.currentStep) {
-      return `Current step: ${employee.currentStep}`;
-    }
-
-    return "No documents in process";
   };
 
   const panes = [
@@ -521,11 +465,25 @@ const VisaManagement = () => {
                     <Table.Cell>
                       {employee.documents &&
                       employee.documents.some(
-                        (doc) => doc.status === "pending"
+                        (doc) =>
+                          doc.status === "pending" &&
+                          ["OPT Receipt", "OPT EAD", "I-983", "I-20"].includes(
+                            doc.type
+                          )
                       ) ? (
+                        // Show review options for visa documents
                         <div>
                           {employee.documents
-                            .filter((doc) => doc.status === "pending")
+                            .filter(
+                              (doc) =>
+                                doc.status === "pending" &&
+                                [
+                                  "OPT Receipt",
+                                  "OPT EAD",
+                                  "I-983",
+                                  "I-20",
+                                ].includes(doc.type)
+                            )
                             .map((doc) => (
                               <div
                                 key={doc._id}
@@ -554,6 +512,11 @@ const VisaManagement = () => {
                                   <Button
                                     color="green"
                                     onClick={() => {
+                                      console.log(
+                                        "Review button clicked",
+                                        employee,
+                                        doc
+                                      );
                                       setSelectedEmployee(employee);
                                       setSelectedDocument(doc);
                                       setIsReviewModalOpen(true);
@@ -566,6 +529,7 @@ const VisaManagement = () => {
                             ))}
                         </div>
                       ) : (
+                        // If no pending visa documents, show send notification button
                         <Button
                           primary
                           onClick={() => handleSendNotification(employee)}
@@ -639,8 +603,7 @@ const VisaManagement = () => {
                                   setSelectedEmployee(employee);
                                   setSelectedDocument(doc);
                                   window.open(
-                                    `http://localhost:5000/api/documents/preview?employeeId=${
-                                      // Make sure we get the string ID, not the object
+                                    `http://localhost:5000/api/visa-status/preview?employeeId=${
                                       typeof employee.employeeId === "object"
                                         ? employee.employeeId._id
                                         : employee.employeeId
@@ -675,9 +638,9 @@ const VisaManagement = () => {
 
   return (
     <Container>
+      <NavigationMenu userRole={userRole} activePath={location.pathname} />
       <Header as="h1">Visa Status Management</Header>
       <Tab panes={panes} />
-
       {/* Document Preview Modal */}
       <Modal
         open={isPreviewModalOpen}
@@ -762,10 +725,12 @@ const VisaManagement = () => {
         </Modal.Actions>
       </Modal>
 
-      {/* Document Review Modal */}
       <Modal
         open={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
+        onClose={() => {
+          setIsReviewModalOpen(false);
+          setFeedback(""); // Clear feedback when closing
+        }}
       >
         <Modal.Header>Review Document</Modal.Header>
         <Modal.Content>
@@ -784,8 +749,9 @@ const VisaManagement = () => {
                   onClick={() =>
                     window.open(
                       `http://localhost:5000/api/documents/preview?employeeId=${
-                        selectedEmployee.employeeId._id ||
-                        selectedEmployee.employeeId
+                        typeof selectedEmployee.employeeId === "object"
+                          ? selectedEmployee.employeeId._id
+                          : selectedEmployee.employeeId
                       }&type=${encodeURIComponent(selectedDocument.type)}`,
                       "_blank"
                     )
@@ -797,8 +763,9 @@ const VisaManagement = () => {
                   onClick={() =>
                     window.open(
                       `http://localhost:5000/api/documents/download?employeeId=${
-                        selectedEmployee.employeeId._id ||
-                        selectedEmployee.employeeId
+                        typeof selectedEmployee.employeeId === "object"
+                          ? selectedEmployee.employeeId._id
+                          : selectedEmployee.employeeId
                       }&type=${encodeURIComponent(selectedDocument.type)}`,
                       "_blank"
                     )

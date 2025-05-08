@@ -83,29 +83,50 @@ const updateDocumentStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status, feedback } = req.body;
 
-  if (!status || !["pending", "approved", "rejected"].includes(status)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid status",
-    });
-  }
-
   try {
-    const updatedDocument = await documentService.updateDocumentStatus(
-      id,
-      status,
-      feedback
-    );
+    // Find document
+    const document = await Document.findById(id);
 
-    res.status(200).json({
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found",
+      });
+    }
+
+    // Validate that feedback is provided for rejection
+    if (status === "rejected" && !feedback) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback is required when rejecting a document",
+      });
+    }
+
+    // Update status
+    document.status = status;
+
+    // Add feedback if provided
+    if (feedback) {
+      document.feedback = feedback;
+    }
+
+    // Update review date
+    document.reviewedAt = new Date();
+
+    // Save changes
+    await document.save();
+
+    return res.status(200).json({
       success: true,
-      data: updatedDocument,
+      message: `Document status updated to ${status}`,
+      data: document,
     });
   } catch (error) {
     console.error("Error updating document status:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Error updating document status",
+      error: error.message,
     });
   }
 });

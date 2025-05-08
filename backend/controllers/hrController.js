@@ -5,6 +5,7 @@ const emailService = require("../services/emailService");
 const Application = require("../models/Application");
 const Token = require("../models/Token");
 const Employee = require("../models/Employee");
+const VisaStatus = require("../models/visaStatus");
 
 const getAllEmployees = asyncHandler(async (req, res) => {
   // Get all employees

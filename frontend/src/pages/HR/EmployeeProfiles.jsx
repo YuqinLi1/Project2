@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Container,
   Header,
@@ -16,10 +16,13 @@ import {
   setSelectedEmployee,
 } from "../../slices/profileSlice";
 import axios from "axios";
+import NavigationMenu from "../../component/NavigationMenu";
 
 const EmployeeProfiles = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [userRole, setUserRole] = useState("hr");
   const { employees, filteredEmployees, searchTerm } = useSelector(
     (state) => state.profiles
   );
@@ -28,6 +31,10 @@ const EmployeeProfiles = () => {
 
   // Fetch all employees on component mount
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (role) {
+      setUserRole(role);
+    }
     const fetchEmployees = async () => {
       try {
         setLoading(true);
@@ -98,6 +105,7 @@ const EmployeeProfiles = () => {
 
   return (
     <Container>
+      <NavigationMenu userRole={userRole} activePath={location.pathname} />
       <Header as="h1">Employee Profiles</Header>
       {error && (
         <Message negative>

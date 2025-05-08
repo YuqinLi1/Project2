@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import {
   Container,
   Header,
@@ -16,9 +16,12 @@ import {
 } from "semantic-ui-react";
 import axios from "axios";
 import DocumentUpload from "../../component/DocumentUpload";
+import NavigationMenu from "../../component/NavigationMenu";
 
 const EmployeeProfileDetail = () => {
   const { id } = useParams();
+  const location = useLocation();
+  const [userRole, setUserRole] = useState("");
   const selectedEmployee = useSelector(
     (state) => state.profiles.selectedEmployee
   );
@@ -30,6 +33,10 @@ const EmployeeProfileDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
+    const role = localStorage.getItem("userRole");
+    if (role) {
+      setUserRole(role);
+    }
     if (selectedEmployee && selectedEmployee._id === id) {
       setEmployee(selectedEmployee);
       fetchDocuments(id);
@@ -413,6 +420,7 @@ const EmployeeProfileDetail = () => {
 
   return (
     <Container>
+      <NavigationMenu userRole={userRole} activePath={location.pathname} />
       <Header as="h1">Employee Profile</Header>
       <Tab panes={panes} />
     </Container>

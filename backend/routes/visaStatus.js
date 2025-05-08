@@ -14,10 +14,11 @@ const {
   uploadVisaDocument,
   getVisaDocumentsByEmployee,
   getVisaDocumentByType,
+  updateVisaDocumentStatus,
 } = require("../controllers/visaController");
 
-// All routes require authentication
-router.use(protect);
+// // All routes require authentication
+// router.use(protect);
 
 // Upload visa document
 router.post(
@@ -31,20 +32,29 @@ router.post(
 );
 
 // HR Only routes
-router.use("/in-progress", authorize("hr"), getEmployeesWithVisaInProgress);
+router.use(
+  "/in-progress",
+  [protect, authorize("hr")],
+  getEmployeesWithVisaInProgress
+);
 
-router.get("/all", authorize("hr"), getAllVisaStatuses);
+router.get("/all", [protect, authorize("hr")], getAllVisaStatuses);
 
 // Send notification for next document
 router.post(
   "/notify/:id",
-  [authorize("hr"), validateRequest],
+  [protect, authorize("hr")],
   sendVisaDocumentNotification
 );
 
 router.get("/download", downloadVisaDocument);
 router.get("/preview", previewVisaDocument);
-router.get('/employee/:employeeId', getVisaDocumentsByEmployee);
-router.get('/document/type', getVisaDocumentByType);
+router.get("/employee/:employeeId", getVisaDocumentsByEmployee);
+router.get("/document/type", getVisaDocumentByType);
+router.put(
+  "/:id/document/:docId/status",
+  [protect, authorize("hr")],
+  updateVisaDocumentStatus
+);
 
 module.exports = router;

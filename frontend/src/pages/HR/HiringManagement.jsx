@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
   Container,
   Header,
@@ -16,12 +17,23 @@ import {
 } from "semantic-ui-react";
 import axios from "axios";
 import { setFeedbackText } from "../../slices/hiringSlice";
+import NavigationMenu from "../../component/NavigationMenu";
 import RegistrationTokenTab from "../../component/RegistrationToken";
 import EmployeeDetailsModal from "../../component/EmployeeDetailsModal";
 import ApplicationRejectModal from "../../component/ApplicationRejectModal";
 
+const visaDocumentTypes = [
+  "OPT Receipt",
+  "OPT EAD",
+  "I-983",
+  "I-20",
+  "Work Authorization",
+];
+
 const DocumentManagement = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const [userRole, setUserRole] = useState("hr");
   const { feedbackText } = useSelector((state) => state.hiring);
 
   const [loading, setLoading] = useState(false);
@@ -143,13 +155,22 @@ const DocumentManagement = () => {
     }
   };
 
-  const fetchPendingDocuments = async () => {
+  const fetchDocumentsByStatus = async (status, setDocumentsFunction) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const response = await axios.get(
-        "http://localhost:5000/api/documents/status/pending",
+      // Get visa status information with all associated documents
+      const visaStatusResponse = await axios.get(
+        "http://localhost:5000/api/visa-status/all",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Get regular documents with the specified status
+      const documentResponse = await axios.get(
+        `http://localhost:5000/api/documents/status/${status}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -157,78 +178,127 @@ const DocumentManagement = () => {
         }
       );
 
-      if (response.data.success) {
-        setPendingDocuments(response.data.data);
-      }
-      setLoading(false);
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Error fetching pending documents"
-      );
-      setLoading(false);
-    }
-  };
+      // Process data if at least one request was successful
+      if (visaStatusResponse.data.success) {
+        // Extract visa documents with matching status from visa status records
+        const visaDocuments = [];
 
-  const fetchApprovedDocuments = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
+        visaStatusResponse.data.data.forEach((visaStatus) => {
+          // Check if this visa status has documents array
+          if (visaStatus.documents && Array.isArray(visaStatus.documents)) {
+            // Filter for documents with matching status
+            const matchingDocs = visaStatus.documents.filter(
+              (doc) =>
+                doc.status === status && visaDocumentTypes.includes(doc.type)
+            );
 
-      const response = await axios.get(
-        "http://localhost:5000/api/documents/status/approved",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+            // Enhance each document with visa and employee information
+            matchingDocs.forEach((doc) => {
+              visaDocuments.push({
+                ...doc,
+                _id: doc._id,
+                employeeId: visaStatus.employeeId, // This contains the populated employee object
+                visaStatus: {
+                  _id: visaStatus._id,
+                  visaType: visaStatus.visaType,
+                  startDate: visaStatus.startDate,
+                  endDate: visaStatus.endDate,
+                  currentStep: visaStatus.currentStep,
+                },
+              });
+            });
+          }
+        });
+
+        // Combine visa documents with regular documents if available
+        let allDocuments = [...visaDocuments];
+
+        if (documentResponse.data.success) {
+          // Filter regular documents to only include visa-related ones
+          const regularVisaDocuments = documentResponse.data.data.filter(
+            (doc) => visaDocumentTypes.includes(doc.type)
+          );
+
+          allDocuments = [...allDocuments, ...regularVisaDocuments];
         }
-      );
 
-      if (response.data.success) {
-        setApprovedDocuments(response.data.data);
+        // Set the documents in state
+        setDocumentsFunction(allDocuments);
+      } else if (documentResponse.data.success) {
+        // If only regular documents were fetched successfully
+        const filteredDocuments = documentResponse.data.data.filter((doc) =>
+          visaDocumentTypes.includes(doc.type)
+        );
+
+        setDocumentsFunction(filteredDocuments);
       }
+
       setLoading(false);
     } catch (err) {
+      console.error(`Error fetching ${status} documents:`, err);
       setError(
-        err.response?.data?.message || "Error fetching approved documents"
+        err.response?.data?.message || `Error fetching ${status} documents`
       );
       setLoading(false);
     }
   };
-
-  const fetchRejectedDocuments = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-
-      const response = await axios.get(
-        "http://localhost:5000/api/documents/status/rejected",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setRejectedDocuments(response.data.data);
-      }
-      setLoading(false);
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Error fetching rejected documents"
-      );
-      setLoading(false);
-    }
-  };
+  // Then call this function like:
+  const fetchPendingDocuments = () =>
+    fetchDocumentsByStatus("pending", setPendingDocuments);
+  const fetchApprovedDocuments = () =>
+    fetchDocumentsByStatus("approved", setApprovedDocuments);
+  const fetchRejectedDocuments = () =>
+    fetchDocumentsByStatus("rejected", setRejectedDocuments);
 
   // Handle document approval
-  const handleApproveDocument = async (documentId) => {
+  const handleApproveDocument = async (
+    documentId,
+    isVisaDocument = false,
+    visaStatusId = null
+  ) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token");
 
-      const response = await axios.put(
-        `http://localhost:5000/api/documents/${documentId}/status`,
+      // Find the document in your state
+      const docToUpdate = [...rejectedDocuments, ...pendingDocuments].find(
+        (doc) => doc._id === documentId
+      );
+
+      if (!docToUpdate) {
+        setError("Document not found in state");
+        setLoading(false);
+        return;
+      }
+
+      // Optimistically update state (remove from current lists)
+      setPendingDocuments((prev) =>
+        prev.filter((doc) => doc._id !== documentId)
+      );
+      setRejectedDocuments((prev) =>
+        prev.filter((doc) => doc._id !== documentId)
+      );
+
+      // Add to approved list with updated status
+      setApprovedDocuments((prev) => [
+        ...prev,
+        { ...docToUpdate, status: "approved", reviewedAt: new Date() },
+      ]);
+
+      // Show success message immediately
+      setSuccess("Document approved successfully");
+
+      const token = localStorage.getItem("token");
+      let endpoint = "";
+
+      if (isVisaDocument && visaStatusId) {
+        endpoint = `http://localhost:5000/api/visa-status/${visaStatusId}/document/${documentId}/status`;
+      } else {
+        endpoint = `http://localhost:5000/api/documents/${documentId}/status`;
+      }
+
+      // Make API call in background
+      await axios.put(
+        endpoint,
         { status: "approved" },
         {
           headers: {
@@ -238,12 +308,10 @@ const DocumentManagement = () => {
         }
       );
 
-      if (response.data.success) {
-        // Refresh documents
-        await fetchPendingDocuments();
-        await fetchApprovedDocuments();
-        setSuccess("Document approved successfully");
-      }
+      // Refresh data from server in the background
+      fetchPendingDocuments();
+      fetchApprovedDocuments();
+      fetchRejectedDocuments();
 
       setLoading(false);
     } catch (err) {
@@ -253,7 +321,11 @@ const DocumentManagement = () => {
   };
 
   // Handle document rejection
-  const handleRejectDocument = async (documentId) => {
+  const handleRejectDocument = async (
+    documentId,
+    isVisaDocument = false,
+    visaStatusId = null
+  ) => {
     if (!feedbackText) {
       setError("Feedback is required for rejection");
       return;
@@ -263,19 +335,31 @@ const DocumentManagement = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const response = await axios.put(
-        `http://localhost:5000/api/documents/${documentId}/status`,
-        {
-          status: "rejected",
-          feedback: feedbackText,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+      console.log("Document rejection request:", {
+        documentId,
+        isVisaDocument,
+        visaStatusId,
+      });
+
+      let response;
+
+      if (isVisaDocument && visaStatusId) {
+        console.log("Using visa status endpoint for document rejection");
+        // For documents stored in visa status
+        response = await axios.put(
+          `http://localhost:5000/api/visa-status/${visaStatusId}/document/${documentId}/status`,
+          {
+            status: "rejected",
+            feedback: feedbackText,
           },
-        }
-      );
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
 
       if (response.data.success) {
         // Refresh documents
@@ -285,8 +369,16 @@ const DocumentManagement = () => {
         dispatch(setFeedbackText(""));
       }
 
+      fetchPendingDocuments();
+      fetchApprovedDocuments();
+      fetchRejectedDocuments();
+
       setLoading(false);
     } catch (err) {
+      console.error(
+        "Error rejecting document:",
+        err.response?.data || err.message
+      );
       setError(err.response?.data?.message || "Error rejecting document");
       setLoading(false);
     }
@@ -298,6 +390,19 @@ const DocumentManagement = () => {
     setShowRejectForm(true);
   };
 
+  const getPreviewUrl = (doc) => {
+    // If it's a visa status document (has visaStatus property)
+    if (doc.visaStatus) {
+      return `http://localhost:5000/api/visa-status/preview?employeeId=${
+        typeof doc.employeeId === "object" ? doc.employeeId._id : doc.employeeId
+      }&type=${encodeURIComponent(doc.type)}`;
+    }
+
+    // Regular document
+    return `http://localhost:5000/api/documents/preview?employeeId=${
+      typeof doc.employeeId === "object" ? doc.employeeId._id : doc.employeeId
+    }&type=${encodeURIComponent(doc.type)}`;
+  };
   // Render document management tabs
   const panes = [
     {
@@ -398,7 +503,7 @@ const DocumentManagement = () => {
       ),
     },
     {
-      menuItem: "Pending Documents",
+      menuItem: "Pending Visa Documents",
       render: () => (
         <Tab.Pane loading={loading}>
           {error && (
@@ -447,12 +552,7 @@ const DocumentManagement = () => {
                           icon
                           labelPosition="left"
                           onClick={() =>
-                            window.open(
-                              `http://localhost:5000/api/documents/preview?employeeId=${
-                                doc.employeeId._id || doc.employeeId
-                              }&type=${encodeURIComponent(doc.type)}`,
-                              "_blank"
-                            )
+                            window.open(getPreviewUrl(doc), "_blank")
                           }
                         >
                           <Icon name="eye" />
@@ -460,7 +560,13 @@ const DocumentManagement = () => {
                         </Button>
                         <Button
                           color="green"
-                          onClick={() => handleApproveDocument(doc._id)}
+                          onClick={() =>
+                            handleApproveDocument(
+                              doc._id,
+                              !!doc.visaStatus, // true if it's a visa document
+                              doc.visaStatus?._id // visa status ID if available
+                            )
+                          }
                         >
                           Approve
                         </Button>
@@ -483,7 +589,7 @@ const DocumentManagement = () => {
       ),
     },
     {
-      menuItem: "Approved Documents",
+      menuItem: "Approved Visa Documents",
       render: () => (
         <Tab.Pane loading={loading}>
           {approvedDocuments.length === 0 ? (
@@ -523,12 +629,7 @@ const DocumentManagement = () => {
                         icon
                         labelPosition="left"
                         onClick={() =>
-                          window.open(
-                            `http://localhost:5000/api/documents/preview?employeeId=${
-                              doc.employeeId._id || doc.employeeId
-                            }&type=${encodeURIComponent(doc.type)}`,
-                            "_blank"
-                          )
+                          window.open(getPreviewUrl(doc), "_blank")
                         }
                       >
                         <Icon name="eye" />
@@ -544,7 +645,7 @@ const DocumentManagement = () => {
       ),
     },
     {
-      menuItem: "Rejected Documents",
+      menuItem: "Rejected Visa Documents",
       render: () => (
         <Tab.Pane loading={loading}>
           {rejectedDocuments.length === 0 ? (
@@ -589,12 +690,7 @@ const DocumentManagement = () => {
                           icon
                           labelPosition="left"
                           onClick={() =>
-                            window.open(
-                              `http://localhost:5000/api/documents/preview?employeeId=${
-                                doc.employeeId._id || doc.employeeId
-                              }&type=${encodeURIComponent(doc.type)}`,
-                              "_blank"
-                            )
+                            window.open(getPreviewUrl(doc), "_blank")
                           }
                         >
                           <Icon name="eye" />
@@ -602,8 +698,29 @@ const DocumentManagement = () => {
                         </Button>
                         <Button
                           color="green"
-                          onClick={() => handleApproveDocument(doc._id)}
+                          onClick={() => {
+                            // Check if it's a visa document
+                            const isVisaDoc =
+                              !!doc.visaStatus ||
+                              !!doc.visaStatusId ||
+                              !!doc.uploadDate ||
+                              doc.isVisaDocument === true;
+
+                            // Get the visa status ID if it's a visa document
+                            let visaStatusId = null;
+                            if (isVisaDoc) {
+                              visaStatusId =
+                                doc.visaStatus?._id || doc.visaStatusId;
+                            }
+
+                            handleApproveDocument(
+                              doc._id,
+                              isVisaDoc,
+                              visaStatusId
+                            );
+                          }}
                         >
+                          <Icon name="check" />
                           Approve
                         </Button>
                       </Button.Group>
@@ -620,6 +737,7 @@ const DocumentManagement = () => {
 
   return (
     <Container>
+      <NavigationMenu userRole={userRole} activePath={location.pathname} />
       <Header as="h1">Hiring Management</Header>
       <Tab panes={panes} />
 
@@ -645,7 +763,11 @@ const DocumentManagement = () => {
           <Button
             negative
             onClick={() => {
-              handleRejectDocument(selectedDocument._id);
+              handleRejectDocument(
+                selectedDocument._id,
+                !!selectedDocument.visaStatus,
+                selectedDocument.visaStatus?._id
+              );
               setSelectedDocument(null);
             }}
             disabled={!feedbackText}
